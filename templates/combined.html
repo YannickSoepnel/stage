@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% block content %}
+    <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
+    {% for alert in alert_list %}
+            <h5>{{ alert.application}}</h5>
+            {{ alert.id}}<br/>
+            {{ alert.timestamp}}<br/>
+            {{ alert.source}}<br/>
+    {% endfor %}
+{% endblock content %}

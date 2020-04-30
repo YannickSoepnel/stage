@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+    {{ tijd1 }}
+    {{ tijd2 }}
+    <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
+    {% for alert in alert_list[::-1] %}
+         {% if tijd1 <= alert.timestamp <= tijd2 %}
+            <h5>{{ alert.application}}</h5>
+            {{ alert.id}}<br/>
+            {{ alert.timestamp}}<br/>
+            {{ alert.source}}<br/>
+        {% endif %}
+    {% endfor %}
+{% endblock content %}
