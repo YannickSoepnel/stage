@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
+    {{ tijd }}
     {{ tijd1 }}
-    {{ tijd2 }}
     <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
     {% for key in honeypot_type.keys() %}
         {{ key }} {{honeypot_type.get(key)}} <br/>
@@ -9,6 +9,11 @@
     {% for key in verwerkt_ip.keys() %}
         {{ key }} {{verwerkt_ip[key][0]}} {{ verwerkt_ip[key][1] }} <br/>
     {% endfor %}
+
+    {% for key in verwerkt_ip %}
+        {{verwerkt_ip}}
+    {% endfor %}
+
     {% for alert in alert_list[::-1] %}
         {% if tijd1 <= alert.timestamp %}
             <h5>{{ alert.application}}</h5>

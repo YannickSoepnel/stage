@@ -6,7 +6,9 @@ import json
 import time
 from elasticsearch import *
 import datetime
-from dateutil.tz import tz, tzlocal
+import pytz
+import tzlocal
+import random
 
 app = Flask(__name__)
 
@@ -16,6 +18,7 @@ es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_au
 duplicate_honeypot = []
 verwerkt_honeypot = []
 verwerkt_ip = {}
+verwerkt_landen = {}
 duplicate_duckhunt = []
 verwerkt_duckhunt = []
 lengte_honeypot = {}
@@ -37,17 +40,10 @@ uncategorized = 0
 
 gecombineerd = []
 
-tijd1 = datetime.datetime.now() - datetime.timedelta(hours=2)
-tijd2 = datetime.datetime.now() - datetime.timedelta(hours=1, minutes=50)
-test_time = datetime.datetime.now() - datetime.timedelta(hours=2, seconds=12)
-# tijd1 = last_seconds.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+ 'Z'
-# tijd2 = last_between_seconds.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+ 'Z'
-# tijd3 = test_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]+ 'Z'
+data_visualise = []
+labels_visualise = []
 
-# if(tijd1 <= tijd3 <= tijd2):
-#     print("gelukt")
-#     print(tijd3)
-
+tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
 # print(local_datetime_converted)
 
@@ -101,7 +97,9 @@ def process_data_honeypot(hit):
     alert = {}
     alert['application'] = "Honeypot"
     alert['id'] = hit['_id']
-    alert['timestamp'] = datetime.datetime.strptime(hit['_source']['@timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    alert['timestamp'] = convert_timezone(hit['_source']['@timestamp'])
+    print(hit['_source']['@timestamp'])
+    print(convert_timezone(hit['_source']['@timestamp']))
     alert['ip'] = hit['_source']['geoip']['ip']
     alert['ip_country'] = hit['_source']['geoip']['country_name']
     if(hit['_source']['type'] == "Adbhoney"):
@@ -157,6 +155,15 @@ def process_data_honeypot(hit):
         verwerkt_ip[ip_to_add] = [1, hit['_source']['geoip']['country_name']]
     else:
         verwerkt_ip[ip_to_add][0] += 1
+    country_to_add = hit['_source']['geoip']['country_name']
+    r = str(random.randint(0, 255))
+    g = str(random.randint(0, 255))
+    b = str(random.randint(0, 255))
+    color = "rgba(" + r + ", " + g + ", " + b + ")"
+    if not country_to_add in verwerkt_landen:
+        verwerkt_landen[country_to_add] = [1, color]
+    else:
+        verwerkt_landen[country_to_add][0] += 1
     return alert
 
 def get_duckhunt_data():
@@ -183,13 +190,21 @@ def process_data_duckhunt(hit):
   alert = {}
   alert['application'] = "Duckhunt"
   alert['id'] = hit['message']['_id']
-  alert['timestamp'] = datetime.datetime.strptime(hit['message']['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ')
+  alert['timestamp'] = convert_timezone(hit['message']['timestamp'])
   alert['source'] = hit['message']['source']
   # if(hit['message']['rule_name']):
   #   alert['rule-name'] = hit['message']['rule_name']
   # else:
   #   alert['rule-name'] = "gelukt!"
   return alert
+
+def convert_timezone(time):
+    tijd = time
+    convert_time = datetime.datetime.strptime(tijd, '%Y-%m-%dT%H:%M:%S.%fZ')
+    local_timezone = tzlocal.get_localzone() #Haal locale tijdzone op
+    convert = convert_time.replace(tzinfo=pytz.utc).astimezone(local_timezone)
+    converted = convert.replace(tzinfo=None) #Verwijder +02:00 aan date format
+    return converted
 
 # Create two threads as follows
 try:
@@ -205,7 +220,7 @@ def index():
 
 @app.route('/home', methods=["GET", "POST"])
 def home():
-    return render_template('home.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, tijd2=tijd2, lengte=lengte_duckhunt)
+    return render_template('home.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, lengte=lengte_duckhunt)
 
 @app.route('/combined', methods=["GET", "POST"])
 def combined():
@@ -220,29 +235,35 @@ def about():
 
 @app.route('/honeypot', methods=["GET", "POST"])
 def honeypot():
-    global tijd1, tijd2
+    global tijd1
     if request.method == "POST":
         nieuwe_tijd = request.form["tijd"]
         if(nieuwe_tijd == "15 minuten"):
-            tijd1 = datetime.datetime.now() - datetime.timedelta(hours=2, minutes=1)
+            tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
             print("15 minuten")
             return redirect(request.path,code=302)
         elif(nieuwe_tijd == "30 minuten"):
-            tijd1 = datetime.datetime.now() - datetime.timedelta(hours=2, minutes=10)
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=10)
             print("30 minuten")
             return redirect(request.path,code=302)
         elif(nieuwe_tijd == "1 uur"):
-            tijd1 = datetime.datetime.now() - datetime.timedelta(hours=2, minutes=15)
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=15)
             return redirect(request.path, code=302)
     elif request.method == "POST":
-        tijd1 = datetime.datetime.now() - datetime.timedelta(hours=2, minutes=1)
+        tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=1)
         print("else")
-    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, tijd2=tijd2, lengte=lengte_honeypot, honeypot_type=honeypot_type, verwerkt_ip=verwerkt_ip)
+    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, honeypot_type=honeypot_type, verwerkt_ip=verwerkt_ip)
 
-@app.route('/visualise')
+@app.route("/visualise")
 def visualise():
-    return render_template('visualise.html', title='visualise')
-
+    legend = 'Most attacking ips'
+    # labels = ["January", "February", "March", "April", "May", "June", "July", "August"]
+    # values = [10, 9, 8, 7, 6, 4, 7, 8]
+    for key in verwerkt_ip:
+        if not key in labels_visualise:
+            labels_visualise.append(key)
+            data_visualise.append(verwerkt_ip[key][0])
+    return render_template('visualise.html', values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen)
 
 
 if __name__ == '__main__':

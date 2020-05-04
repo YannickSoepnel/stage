@@ -1,4 +1,75 @@
 {% extends "layout.html" %}
-{% block content %}
-    <h1>Visualise</h1>
+
+
+
+{% block visualise %}
+<h1>Simple Line Chart</h1>
+<!-- bar chart canvas element -->
+<div class="convas-container">
+<canvas id="myChart" width="600" height="400"></canvas>
+<canvas id="myChart2" width="600" height="400"></canvas>
+<p id="caption">The chart is displaying a simple line chart.</p>
+</div>
+
+    <script>
+        // Global parameters:
+        // do not resize the chart canvas when its container does (keep at 600x400px)
+        Chart.defaults.global.responsive = false;
+
+        // define the chart data
+        var chartData = {
+          labels : ["test", "test2"],
+          datasets : [{
+              label: '{{ legend }}',
+              fill: true,
+              lineTension: 0.1,
+              backgroundColor:
+              ["rgba(75,192,192,0.4)",  "rgba(75,0,192,0.4)"],
+              data : ["1", "20"],
+              spanGaps: false
+          }]
+        }
+
+        var chartData2 = {
+          labels : [{% for item in verwerkt_landen %}
+                       "{{item}}",
+                     {% endfor %}],
+          datasets : [{
+              label: '{{ legend }}',
+              fill: true,
+              lineTension: 0.1,
+              backgroundColor: [{% for key in verwerkt_landen %}
+                                   "{{verwerkt_landen[key][1]}}",
+                                   {% endfor %}],
+              data : [{% for key in verwerkt_landen %}
+                           {{verwerkt_landen[key][0]}},
+                      {% endfor %}],
+              spanGaps: false
+          }]
+        }
+
+        // get chart canvas
+        var ctx = document.getElementById("myChart").getContext("2d");
+        var ctx2 = document.getElementById("myChart2").getContext("2d");
+
+        // create the chart using the chart canvas
+        var myChart = new Chart(ctx, {
+          type: 'pie',
+          data: chartData,
+        });
+
+
+        var myChart2 = new Chart(ctx2, {
+          type: 'pie',
+          data: chartData2,
+        });
+
+    var dynamicColors = function() {
+        var r = Math.floor(Math.random() * 255);
+        var g = Math.floor(Math.random() * 255);
+        var b = Math.floor(Math.random() * 255);
+        return "rgb(" + r + "," + g + "," + b + ")";
+    }
+
+    </script>
 {% endblock %}
