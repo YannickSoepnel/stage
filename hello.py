@@ -37,11 +37,13 @@ medpot = 0
 rdpy = 0
 tanner = 0
 uncategorized = 0
+lengte_unique_ips = 0
 
 gecombineerd = []
 
 data_visualise = []
 labels_visualise = []
+sorted_d = []
 
 tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
@@ -84,22 +86,52 @@ def get_honeypot_data():
                duplicate_honeypot.append(hit)
        time.sleep(1)
 
+count = 0
+histogram = {}
+time_seconden_ophogen = 0
+
 def rekenwerk():
+    global count, time_seconden_ophogen, lengte_unique_ips
+
+    time1 = datetime.datetime.now()
+    time2 = datetime.datetime.now() - datetime.timedelta(seconds=20)
+
     while True:
         lengte_honeypot['lengte'] = len(verwerkt_honeypot)
         lengte_duckhunt['lengte'] = len(verwerkt_duckhunt)
         lengte_combined['lengte'] = len(gecombineerd)
-        time.sleep(1)
+
+        #--------------------------------------------------------------------
+        # VISUALISEREN REKENWERK
+        lengte_unique_ips = len(verwerkt_ip) #lengte van unique source ips
+
+        #Labels voor pie chart landen met aantal keer aanval
+        for key in verwerkt_ip:
+            if not key in labels_visualise:
+                labels_visualise.append(key)
+                data_visualise.append(verwerkt_ip[key][0])
+
+        #Rekenwerk voor histogram
+        time_seconden_ophogen += 1 #Elke seconde verhogen met 1 seconde
+        if(time_seconden_ophogen == 20): #1800 seconden = 30 minuten
+            for item in verwerkt_honeypot:
+                if (time2 <= item['timestamp'] <= time1):
+                    count += 1
+            histogram[time2] = count
+            count = 0
+            time_seconden_ophogen = 0
+            time1 = datetime.datetime.now() #na 30 minuten wordt er een nieuwe now time aangeroepen
+            time2 = datetime.datetime.now() - datetime.timedelta(seconds=20) #now tot +30 minuten wordt berekend
+        time.sleep(1) #Elke seconde aanroepen
+        #--------------------------------------------------------------------
+
 
 def process_data_honeypot(hit):
-    global abdhoney, ciscoasa, conpot, cowrie, dionaea, heralding, honeypy, mailoney, medpot, rdpy, tanner, uncategorized
-    global verwerkt_ip
+    global abdhoney, ciscoasa, conpot, cowrie, dionaea, heralding, honeypy, mailoney, medpot, rdpy, tanner, uncategorized, verwerkt_ip, sorted_d
     alert = {}
     alert['application'] = "Honeypot"
     alert['id'] = hit['_id']
     alert['timestamp'] = convert_timezone(hit['_source']['@timestamp'])
-    print(hit['_source']['@timestamp'])
-    print(convert_timezone(hit['_source']['@timestamp']))
     alert['ip'] = hit['_source']['geoip']['ip']
     alert['ip_country'] = hit['_source']['geoip']['country_name']
     if(hit['_source']['type'] == "Adbhoney"):
@@ -164,6 +196,10 @@ def process_data_honeypot(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
+
+    sorted_d = sorted(verwerkt_ip.items(), key=lambda x: x[1], reverse=True)
+    print(sorted_d)
+
     return alert
 
 def get_duckhunt_data():
@@ -252,18 +288,14 @@ def honeypot():
     elif request.method == "POST":
         tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=1)
         print("else")
-    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, honeypot_type=honeypot_type, verwerkt_ip=verwerkt_ip)
+    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, honeypot_type=honeypot_type, verwerkt_ip=verwerkt_ip, histogram=histogram)
 
 @app.route("/visualise")
 def visualise():
     legend = 'Most attacking ips'
     # labels = ["January", "February", "March", "April", "May", "June", "July", "August"]
     # values = [10, 9, 8, 7, 6, 4, 7, 8]
-    for key in verwerkt_ip:
-        if not key in labels_visualise:
-            labels_visualise.append(key)
-            data_visualise.append(verwerkt_ip[key][0])
-    return render_template('visualise.html', values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen)
+    return render_template('visualise.html', values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen, histogram=histogram, lengte_unique_ips = lengte_unique_ips,lengte_honeypot=lengte_honeypot, sorted_d = sorted_d)
 
 
 if __name__ == '__main__':

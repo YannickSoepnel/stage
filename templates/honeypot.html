@@ -1,7 +1,23 @@
 {% extends "layout.html" %}
+
+{% block dropdownbutton %}
+<form action="", class="form-inline" method="post">
+              <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Dropdown Example
+              <span class="caret"></span></button>
+              <ul class="dropdown-menu">
+                <li><input class="btn btn-default" type="submit" name="tijd" value="15 minuten"></li>
+                <li><input class="btn btn-default" type="submit" name="tijd" value="30 minuten"></li>
+                <li><input class="btn btn-default" type="submit" name="tijd" value="1 uur"></li>
+              </ul>
+            </form>
+{% endblock dropdownbutton %}
+
 {% block content %}
-    {{ tijd }}
-    {{ tijd1 }}
+{{ tijd }}
+{{ tijd1 }}
+
+
+    {{ histogram }}
     <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
     {% for key in honeypot_type.keys() %}
         {{ key }} {{honeypot_type.get(key)}} <br/>
