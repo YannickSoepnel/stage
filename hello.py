@@ -9,10 +9,9 @@ import datetime
 import pytz
 import tzlocal
 import random
+import pycountry
 
 app = Flask(__name__)
-
-es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"))
 
 # Define a function for the thread
 duplicate_honeypot = []
@@ -24,34 +23,28 @@ verwerkt_duckhunt = []
 lengte_honeypot = {}
 lengte_duckhunt = {}
 lengte_combined = {}
-honeypot_type = {}
-abdhoney = 0
-ciscoasa = 0
-conpot = 0
-cowrie = 0
-dionaea = 0
-heralding = 0
-honeypy = 0
-mailoney = 0
-medpot = 0
-rdpy = 0
-tanner = 0
-uncategorized = 0
 lengte_unique_ips = 0
-
 gecombineerd = []
+ungraded_events = []
+host_grade = {}
 
 data_visualise = []
 labels_visualise = []
 sorted_d = []
+sorted_histogram = []
+
+count = 0
+histogram = {}
+time_seconden_ophogen = 0
+
+
 
 tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
-# print(local_datetime_converted)
-
 def get_honeypot_data():
-   time_last_request = datetime.datetime.utcnow()
-   while True:
+    es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"))
+    time_last_request = datetime.datetime.utcnow()
+    while True:
        tmp = str(time_last_request).split(" ")
        ES_query = {"query": {
            "bool": {
@@ -81,29 +74,78 @@ def get_honeypot_data():
                        if verwerking != None:
                            verwerkt_honeypot.append(verwerking)
                            gecombineerd.append(verwerking)
+                           ungraded_events.append(verwerking)
                except:
                    pass
                duplicate_honeypot.append(hit)
        time.sleep(1)
 
-count = 0
-histogram = {}
-time_seconden_ophogen = 0
+
+def unieke_data_sorteren_honeypot(data):
+    unieke_data_honeypot = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            for key1, value1 in value.items():
+                if isinstance(value1, dict):
+                    for key2, value2 in value1.items():
+                        if isinstance(value2, dict):
+                            for key3, value3 in value2.items():
+                                if isinstance(value3, dict):
+                                    for key4, value4 in value3.items():
+                                        if isinstance(value4, dict):
+                                            pass
+                                        else:
+                                            unieke_data_honeypot[key4] = value4
+                                else:
+                                    unieke_data_honeypot[key3] = value3
+                        else:
+                            unieke_data_honeypot[key2] = value2
+                else:
+                    unieke_data_honeypot[key1] = value1
+        else:
+            unieke_data_honeypot[key] = value
+    return unieke_data_honeypot
+
+
+def unieke_data_sorteren_duckhunt(data):
+    unieke_data_duckhunt = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            for key1, value1 in value.items():
+                if isinstance(value1, dict):
+                    for key2, value2 in value1.items():
+                        if isinstance(value2, dict):
+                            for key3, value3 in value2.items():
+                                if isinstance(value3, dict):
+                                    for key4, value4 in value3.items():
+                                        if isinstance(value4, dict):
+                                            pass
+                                        else:
+                                            unieke_data_duckhunt[key4] = value4
+                                else:
+                                    unieke_data_duckhunt[key3] = value3
+                        else:
+                            unieke_data_duckhunt[key2] = value2
+                else:
+                    unieke_data_duckhunt[key1] = value1
+        else:
+            unieke_data_duckhunt[key] = value
+    return unieke_data_duckhunt
 
 def rekenwerk():
-    global count, time_seconden_ophogen, lengte_unique_ips
+    global count, time_seconden_ophogen, lengte_unique_ips, sorted_d, sorted_histogram
 
     time1 = datetime.datetime.now()
-    time2 = datetime.datetime.now() - datetime.timedelta(seconds=20)
+    time2 = datetime.datetime.now() - datetime.timedelta(seconds=60)
 
     while True:
-        lengte_honeypot['lengte'] = len(verwerkt_honeypot)
-        lengte_duckhunt['lengte'] = len(verwerkt_duckhunt)
         lengte_combined['lengte'] = len(gecombineerd)
 
         #--------------------------------------------------------------------
         # VISUALISEREN REKENWERK
         lengte_unique_ips = len(verwerkt_ip) #lengte van unique source ips
+
+        sorted_d = sorted(verwerkt_ip.items(), key=lambda x: x[1], reverse=True) #Gesorteerde lijst voor top 10 aanvallers tabel
 
         #Labels voor pie chart landen met aantal keer aanval
         for key in verwerkt_ip:
@@ -113,80 +155,93 @@ def rekenwerk():
 
         #Rekenwerk voor histogram
         time_seconden_ophogen += 1 #Elke seconde verhogen met 1 seconde
-        if(time_seconden_ophogen == 20): #1800 seconden = 30 minuten
+        if(time_seconden_ophogen == 60): #1800 seconden = 30 minuten
             for item in verwerkt_honeypot:
                 if (time2 <= item['timestamp'] <= time1):
                     count += 1
-            histogram[time2] = count
+            histogram[time2.strftime("%H:%M:%S")] = count
             count = 0
             time_seconden_ophogen = 0
             time1 = datetime.datetime.now() #na 30 minuten wordt er een nieuwe now time aangeroepen
-            time2 = datetime.datetime.now() - datetime.timedelta(seconds=20) #now tot +30 minuten wordt berekend
-        time.sleep(1) #Elke seconde aanroepen
+            time2 = datetime.datetime.now() - datetime.timedelta(seconds=60) #now tot +30 minuten wordt berekend
+        sorted_histogram = sorted(histogram.items(), key=lambda x: x[0])
         #--------------------------------------------------------------------
 
 
+        #Grading events
+        #
+        #   host_grade[IP-adres] = [LAND, FREQUENTIE, APPLICATIE]
+        #
+        #   {'IP-adres': [LAND, FREQUENTIE, APPLICATIE]}
+        #
+        for alert in ungraded_events:
+            host_grade_ip = alert['source_ip']
+            if(alert['source_country'] == "Netherlands") or (alert['source_country'] == "Belgium"): #Grading home country)
+                host_grade[host_grade_ip] = [-1, 0, 0]
+            elif(alert['source_country'] == "Germany") or (alert['source_country'] == "France") or (alert['source_country'] == "Italy"):
+                host_grade[host_grade_ip] = [2, 0, 0]
+            elif(alert['source_country'] == "China"):
+                host_grade[host_grade_ip] = [10, 0, 0]
+            else:
+                host_grade[host_grade_ip] = [5, 0, 0]
+            if(host_grade_ip in verwerkt_ip):
+                if(verwerkt_ip[host_grade_ip][0] <= 10):
+                    host_grade[host_grade_ip][1] = 2
+                elif(10 <= verwerkt_ip[host_grade_ip][0] <= 20):
+                    host_grade[host_grade_ip][1] = 5
+                elif (20 <= verwerkt_ip[host_grade_ip][0] <= 100):
+                    host_grade[host_grade_ip][1] = 10
+                elif(100 <= verwerkt_ip[host_grade_ip][0]):
+                    host_grade[host_grade_ip][1] = 100
+            if(alert['application'] == 'honeypot'): #Hogere score als alert van honeypot is
+                host_grade[host_grade_ip][2] = 10
+            elif(alert['application'] == 'duckhunt'):
+                host_grade[host_grade_ip][2] = 5
+            ungraded_events.remove(alert)
+        time.sleep(1)
+
+
+
 def process_data_honeypot(hit):
-    global abdhoney, ciscoasa, conpot, cowrie, dionaea, heralding, honeypy, mailoney, medpot, rdpy, tanner, uncategorized, verwerkt_ip, sorted_d
     alert = {}
-    alert['application'] = "Honeypot"
+    alert['application'] = "honeypot"
     alert['id'] = hit['_id']
     alert['timestamp'] = convert_timezone(hit['_source']['@timestamp'])
-    alert['ip'] = hit['_source']['geoip']['ip']
-    alert['ip_country'] = hit['_source']['geoip']['country_name']
+    alert['source_ip'] = hit['_source']['geoip']['ip']
+    alert['destination_ip'] = hit['_source']['dest_ip']
+    alert['source_country'] = hit['_source']['geoip']['country_name']
     if(hit['_source']['type'] == "Adbhoney"):
-        alert['source'] = hit['_source']['type']
-        abdhoney += 1
-        honeypot_type['abdhoney'] = abdhoney
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Ciscoasa"):
-        alert['source'] = hit['_source']['type']
-        ciscoasa += 1
-        honeypot_type['ciscoasa'] = ciscoasa
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Conpot"):
-        alert['source'] = hit['_source']['type']
-        conpot += 1
-        honeypot_type['conpot'] = conpot
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Cowrie"):
-        alert['source'] = hit['_source']['type']
-        cowrie += 1
-        honeypot_type['cowrie'] = cowrie
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Dionaea"):
-        alert['source'] = hit['_source']['type']
-        dionaea += 1
-        honeypot_type['dionaea'] = dionaea
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Heralding"):
-        alert['source'] = hit['_source']['type']
-        heralding += 1
-        honeypot_type['heralding'] = heralding
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "HoneyPy"):
-        alert['source'] = hit['_source']['type']
-        honeypy += 1
-        honeypot_type['honeypy'] = honeypy
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Mailoney"):
-        alert['source'] = hit['_source']['type']
-        mailoney += 1
-        honeypot_type['mailoney'] = mailoney
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Medpot"):
-        alert['source'] = hit['_source']['type']
-        medpot += 1
-        honeypot_type['medpot'] = medpot
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Rdpy"):
-        alert['source'] = hit['_source']['type']
-        rdpy += 1
-        honeypot_type['rdpy'] = rdpy
+        alert['document_type'] = hit['_source']['type']
     elif (hit['_source']['type'] == "Tanner"):
-        alert['source'] = hit['_source']['type']
-        tanner += 1
-        honeypot_type['tanner'] = tanner
+        alert['document_type'] = hit['_source']['type']
     else:
-        alert['source'] = ""
-        uncategorized += 1
-        honeypot_type['uncategorized'] = uncategorized
+        alert['document_type'] = ""
+    alert['unieke_data'] = unieke_data_sorteren_honeypot(hit)
+
     ip_to_add = hit['_source']['geoip']['ip']
     if not ip_to_add in verwerkt_ip:
         verwerkt_ip[ip_to_add] = [1, hit['_source']['geoip']['country_name']]
     else:
         verwerkt_ip[ip_to_add][0] += 1
+
     country_to_add = hit['_source']['geoip']['country_name']
     r = str(random.randint(0, 255))
     g = str(random.randint(0, 255))
@@ -196,16 +251,12 @@ def process_data_honeypot(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
-
-    sorted_d = sorted(verwerkt_ip.items(), key=lambda x: x[1], reverse=True)
-    print(sorted_d)
-
     return alert
 
 def get_duckhunt_data():
     while True:
         r = requests.get(
-            'https://webinsight.true.nl:443/api/search/universal/relative?query=*&range=1&fields=*&decorate=true',
+            'https://webinsight.true.nl:443/api/search/universal/relative?query=trueserver_document_type%3Aduckhunt%5C-modsecurity%20OR%20trueserver_document_type%3Aduckhunt%5C-suricata&range=1&fields=*&decorate=true',
             headers={'accept': 'application/json'}, allow_redirects=True,
             auth=('admin', '1hil6ep6Y3jI2tfCXIKcKsTlUjnZpTj8'))
         message = r.json()['messages']
@@ -217,22 +268,59 @@ def get_duckhunt_data():
                         if verwerking != None:
                             verwerkt_duckhunt.append(verwerking)
                             gecombineerd.append(verwerking)
+                            ungraded_events.append(verwerking)
                     duplicate_duckhunt.append(hit)
                 except:
                     pass
         time.sleep(1)
 
+def get_palo_data():
+    while True:
+        r = requests.get(
+            'https://logs.true.nl:443/api/search/universal/relative?query=pa5050&range=10&decorate=true',
+            headers={'accept': 'application/json'}, allow_redirects=True,
+            auth=('yannick.soepnel@true.nl', 'Rome:Fell:0!'))
+        message = r.json()['messages']
+        # if (len(message) != 0):
+        #     for hit in message:
+        #         try:
+        #             print(hit)
+        #         except:
+        #             pass
+        time.sleep(1)
+
 def process_data_duckhunt(hit):
-  alert = {}
-  alert['application'] = "Duckhunt"
-  alert['id'] = hit['message']['_id']
-  alert['timestamp'] = convert_timezone(hit['message']['timestamp'])
-  alert['source'] = hit['message']['source']
-  # if(hit['message']['rule_name']):
-  #   alert['rule-name'] = hit['message']['rule_name']
-  # else:
-  #   alert['rule-name'] = "gelukt!"
-  return alert
+    alert = {}
+    alert['application'] = "duckhunt"
+    alert['timestamp'] = convert_timezone(hit['message']['timestamp'])
+    alert['id'] = hit['message']['_id']
+    if(hit['message']['trueserver_document_type'] == 'duckhunt-suricata'):
+        alert['document_type'] = "suricata"
+        alert['source_ip'] = hit['message']['http_xff']
+        alert['destination_ip'] = hit['message']['http_hostname']
+        alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
+        alert['unieke_data'] = unieke_data_sorteren_duckhunt(hit)
+    elif(hit['message']['trueserver_document_type'] == 'duckhunt-modsecurity'):
+        alert['document_type'] = "modsecurity"
+        alert['source_ip'] = hit['message']['transaction_client_ip']
+        alert['destination_ip'] = hit['message']['transaction_host_ip']
+        alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).name
+        alert['unieke_data'] = unieke_data_sorteren_duckhunt(hit)
+    ip_to_add = alert['source_ip']
+    if not ip_to_add in verwerkt_ip:
+      verwerkt_ip[ip_to_add] = [1, alert['source_country']]
+    else:
+      verwerkt_ip[ip_to_add][0] += 1
+    country_to_add = alert['source_country']
+    r = str(random.randint(0, 255))
+    g = str(random.randint(0, 255))
+    b = str(random.randint(0, 255))
+    color = "rgba(" + r + ", " + g + ", " + b + ")"
+    if not country_to_add in verwerkt_landen:
+        verwerkt_landen[country_to_add] = [1, color]
+    else:
+        verwerkt_landen[country_to_add][0] += 1
+    return alert
 
 def convert_timezone(time):
     tijd = time
@@ -247,6 +335,7 @@ try:
     _thread.start_new_thread( get_honeypot_data, ())
     _thread.start_new_thread( get_duckhunt_data, ())
     _thread.start_new_thread( rekenwerk, ())
+    _thread.start_new_thread( get_palo_data, ())
 except:
    print("Error: unable to start thread")
 
@@ -258,13 +347,31 @@ def index():
 def home():
     return render_template('home.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, lengte=lengte_duckhunt)
 
+@app.route('/visualisation', methods=["GET", "POST"])
+def visualisation():
+    return render_template('visualisation.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, lengte=lengte_duckhunt)
+
 @app.route('/combined', methods=["GET", "POST"])
 def combined():
+    global tijd1
     if request.method == "POST":
         nieuwe_tijd = request.form["tijd"]
-        print(nieuwe_tijd)
-        print("gelukt")
-    return render_template('combined.html', alert_list=gecombineerd, title='combined', lengte=lengte_combined)
+        if (nieuwe_tijd == "15 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
+            print("15 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "30 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=10)
+            print("30 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "1 uur"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=15)
+            return redirect(request.path, code=302)
+    elif request.method == "POST":
+        tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=2)
+        print("else")
+    return render_template('combined.html', alert_list=gecombineerd, title='combined', lengte=lengte_combined, tijd1=tijd1)
+
 @app.route('/about')
 def about():
     return render_template('about.html', title='about')
@@ -288,14 +395,14 @@ def honeypot():
     elif request.method == "POST":
         tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=1)
         print("else")
-    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, honeypot_type=honeypot_type, verwerkt_ip=verwerkt_ip, histogram=histogram)
+    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, verwerkt_ip=verwerkt_ip, histogram=histogram)
 
 @app.route("/visualise")
 def visualise():
     legend = 'Most attacking ips'
     # labels = ["January", "February", "March", "April", "May", "June", "July", "August"]
     # values = [10, 9, 8, 7, 6, 4, 7, 8]
-    return render_template('visualise.html', values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen, histogram=histogram, lengte_unique_ips = lengte_unique_ips,lengte_honeypot=lengte_honeypot, sorted_d = sorted_d)
+    return render_template('visualise.html', sorted_histogram = sorted_histogram,values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen, histogram=histogram, lengte_unique_ips = lengte_unique_ips,lengte=lengte_combined, sorted_d = sorted_d, host_grade=host_grade)
 
 
 if __name__ == '__main__':

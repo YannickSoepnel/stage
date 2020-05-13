@@ -2,7 +2,7 @@
 
 {% block dropdownbutton %}
 <form action="", class="form-inline" method="post">
-              <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Dropdown Example
+              <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">Dropdown Example
               <span class="caret"></span></button>
               <ul class="dropdown-menu">
                 <li><input class="btn btn-default" type="submit" name="tijd" value="15 minuten"></li>
@@ -19,12 +19,6 @@
 
     {{ histogram }}
     <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
-    {% for key in honeypot_type.keys() %}
-        {{ key }} {{honeypot_type.get(key)}} <br/>
-    {% endfor %}
-    {% for key in verwerkt_ip.keys() %}
-        {{ key }} {{verwerkt_ip[key][0]}} {{ verwerkt_ip[key][1] }} <br/>
-    {% endfor %}
 
     {% for key in verwerkt_ip %}
         {{verwerkt_ip}}

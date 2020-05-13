@@ -1,14 +1,30 @@
 {% extends "layout.html" %}
 {% block content %}
-    {{ tijd1 }}
-    {{ tijd2 }}
-    <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
-    {% for alert in alert_list[::-1] %}
-         {% if tijd1 <= alert.timestamp %}
-            <h5>{{ alert.application}}</h5>
-            {{ alert.id}}<br/>
-            {{ alert.timestamp}}<br/>
-            {{ alert.source}}<br/>
-        {% endif %}
-    {% endfor %}
+    <table style="width:100px;" class="table table-striped">
+                <tr style="text-align: left">
+                    <th>Applicatie</th>
+                    <th style="text-align: center">id</th>
+                    <th>Timestamp</th>
+                    <th>Source ip</th>
+                    <th>Destination</th>
+                    <th>source country</th>
+                    <th>document type</th>
+                    <th>Unieke data</th>
+                </tr>
+           {% for alert in alert_list[::-1]%}
+                {% if tijd1 <= alert.timestamp %}
+                    <tr>
+                      <td>{{ alert.application }}</td>
+                      <td>{{ alert.id }}</td>
+                      <td>{{ alert.timestamp }}</td>
+                      <td>{{ alert.source_ip }}</td>
+                      <td>{{ alert.destination_ip }}</td>
+                      <td>{{ alert.source_country }}</td>
+                      <td>{{ alert.document_type }}</td>
+                        <td width="100" height="20"><div class="unieke_data">{{ alert.unieke_data }}</div></td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
 {% endblock content %}
+
+

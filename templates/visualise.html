@@ -39,6 +39,8 @@
     <div class="canvas-landen">
         <center><b>Piechart aanval landen</b></center>
     <canvas id="myChart2" width="500" height="400"></canvas>
+    <div id="js-legend" class="chart-legend">
+    </div>
     </div>
     <div class="canvas-attacks">
         <center><b>Aantal aanvallen t.o.v. unique source ips</b></center>
@@ -72,16 +74,16 @@
         }
 
         var chartData3 = {
-          labels : [{% for key in histogram %}
-                       "{{key}}",
+          labels : [{% for key in sorted_histogram[-10:] %}
+                       "{{key[0]}}",
                      {% endfor %}],
           datasets : [{
               label: 'Histogram Alerts',
               fill: true,
               lineTension: 0.1,
               backgroundColor: "rgba(75,0,192,0.4)",
-              data : [{% for key in histogram %}
-                           {{histogram[key]}},
+              data : [{% for key in sorted_histogram[-10:] %}
+                           {{key[1]}},
                       {% endfor %}],
               spanGaps: false
           }]
@@ -95,7 +97,7 @@
               lineTension: 0.1,
               backgroundColor:
               ["rgba(75,192,192,0.4)",  "rgba(75,0,192,0.4)"],
-              data : ["{{lengte_honeypot['lengte']}}", "{{lengte_unique_ips}}"],
+              data : ["{{lengte['lengte']}}", "{{lengte_unique_ips}}"],
               spanGaps: false
           }]
         }
@@ -109,11 +111,29 @@
         var myChart2 = new Chart(ctx2, {
           type: 'pie',
           data: chartData2,
+          options:{
+              responsive: false,
+              legend: {
+                 display: false,
+                 position: 'right',
+                 onClick: null,
+                 maxWidth: 100,
+              },
+             }
         });
-
         var myChart3 = new Chart(ctx3, {
           type: 'line',
           data: chartData3,
+          options: {
+            maintainAspectRatio: false,
+            scales: {
+              xAxes: [{
+                ticks: {
+                  padding: 10
+                }
+              }]
+            }
+          }
         });
 
         var myChart4 = new Chart(ctx4, {
@@ -122,6 +142,12 @@
         });
 
 
-
+    document.getElementById('js-legend').innerHTML = myChart2.generateLegend();
     </script>
+
+{% for key in host_grade %}
+    {{ key }} {{ host_grade[key][0] + host_grade[key][1] + host_grade[key][2]}}
+{% endfor %}
+
 {% endblock %}
+
