@@ -1,5 +1,6 @@
 from flask import Flask, render_template, url_for, request, redirect
 import _thread
+import urllib3
 import time
 import requests
 import json
@@ -10,8 +11,52 @@ import pytz
 import tzlocal
 import random
 import pycountry
+import mysql.connector
+from flaskext.mysql import MySQL
+from flask_sqlalchemy import SQLAlchemy
+
+urllib3.disable_warnings()
 
 app = Flask(__name__)
+
+db = SQLAlchemy(app)
+
+SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:ihvhbs93@localhost/stageproject"
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
+
+mysql = MySQL()
+
+mysql.init_app(app)
+
+class landen_db(db.Model):
+    landen_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    score = db.Column(db.Integer)
+
+class frequentie_db(db.Model):
+    frequentie_id = db.Column(db.Integer, primary_key=True)
+    waarde1 = db.Column(db.Integer)
+    waarde2 = db.Column(db.Integer)
+    score = db.Column(db.Integer)
+
+class alerts_db(db.Model):
+    alerts_id = db.Column(db.Integer, primary_key=True)
+    applicatie = db.Column(db.String(255))
+    id = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime)
+    source_ip = db.Column(db.String(255))
+    destination_ip = db.Column(db.String(255))
+    document_type = db.Column(db.String(255))
+    unieke_data = db.Column(db.Text)
+
+
+alert = alerts_db.query.filter_by(applicatie='honeypot').all()
+for ding in alert:
+    print(ding.id)
+    print(ding.destination_ip)
+    print(ding.timestamp)
 
 # Define a function for the thread
 duplicate_honeypot = []
@@ -32,17 +77,17 @@ data_visualise = []
 labels_visualise = []
 sorted_d = []
 sorted_histogram = []
+count_meer_informatie = 0
 
 count = 0
 histogram = {}
 time_seconden_ophogen = 0
 
 
-
 tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
 def get_honeypot_data():
-    es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"))
+    es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"), ignore_warnings=True)
     time_last_request = datetime.datetime.utcnow()
     while True:
        tmp = str(time_last_request).split(" ")
@@ -170,7 +215,7 @@ def rekenwerk():
 
         #Grading events
         #
-        #   host_grade[IP-adres] = [LAND, FREQUENTIE, APPLICATIE]
+        #   host_grade[IP-adres] = [LAND, FREQUENTIE, APPLICATIE, RULE_ID]
         #
         #   {'IP-adres': [LAND, FREQUENTIE, APPLICATIE]}
         #
@@ -200,8 +245,6 @@ def rekenwerk():
             ungraded_events.remove(alert)
         time.sleep(1)
 
-
-
 def process_data_honeypot(hit):
     alert = {}
     alert['application'] = "honeypot"
@@ -210,30 +253,7 @@ def process_data_honeypot(hit):
     alert['source_ip'] = hit['_source']['geoip']['ip']
     alert['destination_ip'] = hit['_source']['dest_ip']
     alert['source_country'] = hit['_source']['geoip']['country_name']
-    if(hit['_source']['type'] == "Adbhoney"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Ciscoasa"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Conpot"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Cowrie"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Dionaea"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Heralding"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "HoneyPy"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Mailoney"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Medpot"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Rdpy"):
-        alert['document_type'] = hit['_source']['type']
-    elif (hit['_source']['type'] == "Tanner"):
-        alert['document_type'] = hit['_source']['type']
-    else:
-        alert['document_type'] = ""
+    alert['document_type'] = hit['_source']['type']
     alert['unieke_data'] = unieke_data_sorteren_honeypot(hit)
 
     ip_to_add = hit['_source']['geoip']['ip']
@@ -251,6 +271,18 @@ def process_data_honeypot(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
+
+    new_alert = alerts_db(
+        applicatie = alert['application'],
+        id = alert['id'],
+        timestamp = alert['timestamp'],
+        source_ip = alert['source_ip'],
+        destination_ip = alert['destination_ip'],
+        document_type = alert['document_type'],
+        unieke_data = str(alert['unieke_data'])
+    )
+    db.session.add(new_alert)
+    db.session.commit()
     return alert
 
 def get_duckhunt_data():
@@ -292,19 +324,19 @@ def get_palo_data():
 def process_data_duckhunt(hit):
     alert = {}
     alert['application'] = "duckhunt"
-    alert['timestamp'] = convert_timezone(hit['message']['timestamp'])
     alert['id'] = hit['message']['_id']
+    alert['timestamp'] = convert_timezone(hit['message']['timestamp'])
     if(hit['message']['trueserver_document_type'] == 'duckhunt-suricata'):
-        alert['document_type'] = "suricata"
         alert['source_ip'] = hit['message']['http_xff']
         alert['destination_ip'] = hit['message']['http_hostname']
         alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
+        alert['document_type'] = "suricata"
         alert['unieke_data'] = unieke_data_sorteren_duckhunt(hit)
     elif(hit['message']['trueserver_document_type'] == 'duckhunt-modsecurity'):
-        alert['document_type'] = "modsecurity"
         alert['source_ip'] = hit['message']['transaction_client_ip']
         alert['destination_ip'] = hit['message']['transaction_host_ip']
         alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).name
+        alert['document_type'] = "modsecurity"
         alert['unieke_data'] = unieke_data_sorteren_duckhunt(hit)
     ip_to_add = alert['source_ip']
     if not ip_to_add in verwerkt_ip:
@@ -320,6 +352,17 @@ def process_data_duckhunt(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
+    new_alert = alerts_db(
+        applicatie=alert['application'],
+        id=alert['id'],
+        timestamp=alert['timestamp'],
+        source_ip=alert['source_ip'],
+        destination_ip=alert['destination_ip'],
+        document_type=alert['document_type'],
+        unieke_data=str(alert['unieke_data'])
+    )
+    db.session.add(new_alert)
+    db.session.commit()
     return alert
 
 def convert_timezone(time):
@@ -330,12 +373,22 @@ def convert_timezone(time):
     converted = convert.replace(tzinfo=None) #Verwijder +02:00 aan date format
     return converted
 
+# def refresh_database():
+    global database_landen
+    while True:
+        mycursor.execute("SELECT * FROM landen")
+        database_landen = mycursor.fetchall()
+        mydb.commit()
+        # print(database_landen)
+        time.sleep(3)
+
 # Create two threads as follows
 try:
     _thread.start_new_thread( get_honeypot_data, ())
     _thread.start_new_thread( get_duckhunt_data, ())
     _thread.start_new_thread( rekenwerk, ())
-    _thread.start_new_thread( get_palo_data, ())
+    # _thread.start_new_thread( get_palo_data, ())
+    # _thread.start_new_thread( refresh_database, ())
 except:
    print("Error: unable to start thread")
 
@@ -353,7 +406,7 @@ def visualisation():
 
 @app.route('/combined', methods=["GET", "POST"])
 def combined():
-    global tijd1
+    global tijd1, count_meer_informatie
     if request.method == "POST":
         nieuwe_tijd = request.form["tijd"]
         if (nieuwe_tijd == "15 minuten"):
@@ -370,11 +423,26 @@ def combined():
     elif request.method == "POST":
         tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=2)
         print("else")
-    return render_template('combined.html', alert_list=gecombineerd, title='combined', lengte=lengte_combined, tijd1=tijd1)
+    return render_template('combined.html', alert_list=gecombineerd, title='combined', lengte=lengte_combined, tijd1=tijd1, count=count_meer_informatie)
+
+@app.route('/settings', methods=["GET", "POST"])
+def settings():
+    if request.method == "POST":
+        form = request.form
+        print(form)
+        for k,v in form.items():
+            sql = """UPDATE landen SET score = %s WHERE name = %s"""
+            data = (v, k)
+            mycursor.execute(sql, data)
+            print(mycursor)
+    return render_template('settings.html', title='settings', database_landen=database_landen)
 
 @app.route('/about')
 def about():
     return render_template('about.html', title='about')
+
+
+p = ['a','b','c','d']
 
 @app.route('/honeypot', methods=["GET", "POST"])
 def honeypot():
@@ -395,7 +463,7 @@ def honeypot():
     elif request.method == "POST":
         tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=1)
         print("else")
-    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, verwerkt_ip=verwerkt_ip, histogram=histogram)
+    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, verwerkt_ip=verwerkt_ip, histogram=histogram, p=p)
 
 @app.route("/visualise")
 def visualise():

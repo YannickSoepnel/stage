@@ -13,8 +13,8 @@
 </form>
 
 {% endblock dropdownbutton %}
-
 {% block content %}
+<div class="accordion" id="accordionExample">
     <table style="width:100px;" class="table table-striped">
                 <tr style="text-align: left">
                     <th>Applicatie</th>
@@ -35,24 +35,33 @@
                       <td>{{ alert.source_ip }}</td>
                       <td>{{ alert.destination_ip }}</td>
                       <td>{{ alert.source_country }}</td>
-                      <td>{{ alert.document_type }}</td>
-                      <td><div class="table-container" style="overflow-y: auto; overflow-x: auto; height: 100px; width: 400px;">
-                          <table>
+                      <td>{{ alert.document_type }} </td>
+                      <td>
+                          <p>
+
+                              <button class="btn btn-secondary" style="width: 150px" type="button" data-toggle="collapse" data-target=#test aria-expanded="false" aria-controls="collapseExample">
+                                Meer informatie {{loop.index}}
+                              </button>
+                          </p>
+                          <div class="collapse" id=test>
+                              <div class="test">
+                                <table>
                               <tr>
                                   <th>Key</th>
                                   <th>Value</th>
                               </tr>
                                 {% for key, value in alert.unieke_data.items() %}
-
                                         <tr><td>{{key}}</td> <td>{{ value }}</td></tr>
                                 {% endfor %}
                           </table>
+                              </div>
                           </div>
                       </td>
                     </tr>
                 {% endif %}
             {% endfor %}
     </table>
+    </div>
 {% endblock content %}
 
 

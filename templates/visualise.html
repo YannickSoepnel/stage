@@ -74,7 +74,7 @@
         }
 
         var chartData3 = {
-          labels : [{% for key in sorted_histogram[-10:] %}
+          labels : [{% for key in sorted_histogram[-24:] %}
                        "{{key[0]}}",
                      {% endfor %}],
           datasets : [{
@@ -82,7 +82,7 @@
               fill: true,
               lineTension: 0.1,
               backgroundColor: "rgba(75,0,192,0.4)",
-              data : [{% for key in sorted_histogram[-10:] %}
+              data : [{% for key in sorted_histogram[-24:] %}
                            {{key[1]}},
                       {% endfor %}],
               spanGaps: false

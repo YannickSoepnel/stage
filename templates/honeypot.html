@@ -13,20 +13,11 @@
 {% endblock dropdownbutton %}
 
 {% block content %}
-{{ tijd }}
-{{ tijd1 }}
 
 
-    {{ histogram }}
-    <h4>Totaal aantal alerts: {{lengte.lengte}}<br/></h4>
-
-    {% for key in verwerkt_ip %}
-        {{verwerkt_ip}}
-    {% endfor %}
 
     {% for alert in alert_list[::-1] %}
         {% if tijd1 <= alert.timestamp %}
-            <h5>{{ alert.application}}</h5>
             {{ alert.id}}<br/>
             {{ alert.timestamp}}<br/>
             {{ alert.source}}<br/>
