@@ -145,9 +145,20 @@
     document.getElementById('js-legend').innerHTML = myChart2.generateLegend();
     </script>
 
-{% for key in host_grade %}
-    {{ key }} {{ host_grade[key][0] + host_grade[key][1] + host_grade[key][2]}}
-{% endfor %}
+
+
+<table>
+                <tr>
+                    <th>IP</th>
+                    <th>Frequentie</th>
+                </tr>
+           {% for key in host_grade %}
+                <tr>
+                  <td>{{ key }}</td>
+                  <td>{{ host_grade[key][0] + host_grade[key][1] + host_grade[key][2]}}</td>
+                 </tr>
+            {% endfor %}
+</table>
 
 {% endblock %}
 

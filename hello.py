@@ -14,6 +14,7 @@ import pycountry
 import mysql.connector
 from flaskext.mysql import MySQL
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import sessionmaker
 
 urllib3.disable_warnings()
 
@@ -37,6 +38,7 @@ class landen_db(db.Model):
 
 class frequentie_db(db.Model):
     frequentie_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
     waarde1 = db.Column(db.Integer)
     waarde2 = db.Column(db.Integer)
     score = db.Column(db.Integer)
@@ -51,12 +53,63 @@ class alerts_db(db.Model):
     document_type = db.Column(db.String(255))
     unieke_data = db.Column(db.Text)
 
+# frequentie = frequentie_db.query.all()
+#
+# if(len(frequentie) <= 2):
+#     if(len(frequentie) == 0):
+#         nieuwe_frequentie = frequentie_db(
+#             name = "Eerste frequentie",
+#             waarde1 = 1,
+#             waarde2 = 10,
+#             score = 1
+#         )
+#         db.session.add(nieuwe_frequentie)
+#     elif(len(frequentie) == 1):
+#         nieuwe_frequentie = frequentie_db(
+#             name="Tweede frequentie",
+#             waarde1=10,
+#             waarde2=100,
+#             score=1
+#         )
+#         db.session.add(nieuwe_frequentie)
+#     elif(len(frequentie) == 2):
+#         nieuwe_frequentie = frequentie_db(
+#             name="Derde frequentie",
+#             waarde1=100,
+#             waarde2=1000,
+#             score=1
+#         )
+#         db.session.add(nieuwe_frequentie)
+#     db.session.commit()
+#
+land = landen_db.query.all()
+# #
+# # print(len(land))
+# #
+# if(len(land) <= 248):
+#     for country in pycountry.countries:
+#         score = 0
+#         try:
+#             print(country.common_name)
+#             nieuw_land = landen_db(
+#                 name = country.common_name,
+#                 score = score
+#             )
+#             db.session.add(nieuw_land)
+#         except:
+#             nieuw_land = landen_db(
+#                 name=country.name,
+#                 score=score
+#             )
+#             db.session.add(nieuw_land)
+#         db.session.commit()
 
-alert = alerts_db.query.filter_by(applicatie='honeypot').all()
-for ding in alert:
-    print(ding.id)
-    print(ding.destination_ip)
-    print(ding.timestamp)
+database_landen = landen_db.query.all()
+database_frequentie = frequentie_db.query.all()
+
+# for frequentie in database_frequentie:
+#     print(frequentie.frequentie_id)
+#     print(frequentie.score)
 
 # Define a function for the thread
 duplicate_honeypot = []
@@ -65,6 +118,8 @@ verwerkt_ip = {}
 verwerkt_landen = {}
 duplicate_duckhunt = []
 verwerkt_duckhunt = []
+verwerkt_logprocessor = []
+duplicate_logprocessor = []
 lengte_honeypot = {}
 lengte_duckhunt = {}
 lengte_combined = {}
@@ -125,34 +180,66 @@ def get_honeypot_data():
                duplicate_honeypot.append(hit)
        time.sleep(1)
 
+def get_duckhunt_data():
+    while True:
+        r = requests.get(
+            'https://webinsight.true.nl:443/api/search/universal/relative?query=trueserver_document_type%3Aduckhunt%5C-modsecurity%20OR%20trueserver_document_type%3Aduckhunt%5C-suricata&range=1&fields=*&decorate=true',
+            headers={'accept': 'application/json'}, allow_redirects=True,
+            auth=('admin', '1hil6ep6Y3jI2tfCXIKcKsTlUjnZpTj8'))
+        message = r.json()['messages']
+        if (len(message) != 0):
+            for hit in message:
+                try:
+                    if not hit in duplicate_duckhunt:
+                        verwerking = process_data_duckhunt(hit)
+                        if verwerking != None:
+                            verwerkt_duckhunt.append(verwerking)
+                            gecombineerd.append(verwerking)
+                            ungraded_events.append(verwerking)
+                    duplicate_duckhunt.append(hit)
+                except:
+                    pass
+        time.sleep(1)
 
-def unieke_data_sorteren_honeypot(data):
-    unieke_data_honeypot = {}
-    for key, value in data.items():
-        if isinstance(value, dict):
-            for key1, value1 in value.items():
-                if isinstance(value1, dict):
-                    for key2, value2 in value1.items():
-                        if isinstance(value2, dict):
-                            for key3, value3 in value2.items():
-                                if isinstance(value3, dict):
-                                    for key4, value4 in value3.items():
-                                        if isinstance(value4, dict):
-                                            pass
-                                        else:
-                                            unieke_data_honeypot[key4] = value4
-                                else:
-                                    unieke_data_honeypot[key3] = value3
-                        else:
-                            unieke_data_honeypot[key2] = value2
-                else:
-                    unieke_data_honeypot[key1] = value1
-        else:
-            unieke_data_honeypot[key] = value
-    return unieke_data_honeypot
+def get_palo_data():
+    while True:
+        r = requests.get(
+            'https://logs.true.nl:443/api/search/universal/relative?query=pa5050&range=10&decorate=true',
+            headers={'accept': 'application/json'}, allow_redirects=True,
+            auth=('yannick.soepnel@true.nl', 'Rome:Fell:0!'))
+        message = r.json()['messages']
+        # if (len(message) != 0):
+        #     for hit in message:
+        #         try:
+        #             print(hit)
+        #         except:
+        #             pass
+        time.sleep(1)
 
+def get_logprocessor_data():
+    while True:
+        r = requests.get(
+            'https://logprocessor.true.nl/abuser/get_security_alerts?timeframe=10'
+        )
+        message = r.json()
 
-def unieke_data_sorteren_duckhunt(data):
+        if (len(message) != 0):
+            for m in message:
+                hit = json.loads(m)
+                try:
+                    if not hit in duplicate_logprocessor:
+                        verwerking = process_data_logprocessor(hit)
+                        if verwerking != None:
+                            verwerkt_logprocessor.append(verwerking)
+                            print(verwerking)
+                            gecombineerd.append(verwerking)
+                            ungraded_events.append(verwerking)
+                    duplicate_logprocessor.append(hit)
+                except:
+                    pass
+        time.sleep(1)
+
+def unieke_data_sorteren(data):
     unieke_data_duckhunt = {}
     for key, value in data.items():
         if isinstance(value, dict):
@@ -221,27 +308,23 @@ def rekenwerk():
         #
         for alert in ungraded_events:
             host_grade_ip = alert['source_ip']
-            if(alert['source_country'] == "Netherlands") or (alert['source_country'] == "Belgium"): #Grading home country)
-                host_grade[host_grade_ip] = [-1, 0, 0]
-            elif(alert['source_country'] == "Germany") or (alert['source_country'] == "France") or (alert['source_country'] == "Italy"):
-                host_grade[host_grade_ip] = [2, 0, 0]
-            elif(alert['source_country'] == "China"):
-                host_grade[host_grade_ip] = [10, 0, 0]
-            else:
-                host_grade[host_grade_ip] = [5, 0, 0]
-            if(host_grade_ip in verwerkt_ip):
-                if(verwerkt_ip[host_grade_ip][0] <= 10):
-                    host_grade[host_grade_ip][1] = 2
-                elif(10 <= verwerkt_ip[host_grade_ip][0] <= 20):
-                    host_grade[host_grade_ip][1] = 5
-                elif (20 <= verwerkt_ip[host_grade_ip][0] <= 100):
-                    host_grade[host_grade_ip][1] = 10
-                elif(100 <= verwerkt_ip[host_grade_ip][0]):
-                    host_grade[host_grade_ip][1] = 100
-            if(alert['application'] == 'honeypot'): #Hogere score als alert van honeypot is
-                host_grade[host_grade_ip][2] = 10
-            elif(alert['application'] == 'duckhunt'):
-                host_grade[host_grade_ip][2] = 5
+            for land in database_landen:
+                if(land.name == alert['source_country']):
+                    host_grade[host_grade_ip] = [land.score, 0, 0]
+            for frequentie in database_frequentie:
+                if(frequentie.frequentie_id == 1):
+                    if (verwerkt_ip[host_grade_ip][0] <= frequentie.waarde2):
+                        host_grade[host_grade_ip][1] = frequentie.score
+                elif(frequentie.frequentie_id == 2):
+                    if(frequentie.waarde1 <= verwerkt_ip[host_grade_ip][0] <= frequentie.waarde2):
+                        host_grade[host_grade_ip][1] = frequentie.score
+                elif(frequentie.frequentie_id == 2):
+                    if(frequentie.waarde1 <= verwerkt_ip[host_grade_ip][0] <= frequentie.waarde2):
+                        host_grade[host_grade_ip][1] = frequentie.score
+            # if(alert['application'] == 'honeypot'): #Hogere score als alert van honeypot is
+            #     host_grade[host_grade_ip][2] = 10
+            # elif(alert['application'] == 'duckhunt'):
+            #     host_grade[host_grade_ip][2] = 5
             ungraded_events.remove(alert)
         time.sleep(1)
 
@@ -254,7 +337,7 @@ def process_data_honeypot(hit):
     alert['destination_ip'] = hit['_source']['dest_ip']
     alert['source_country'] = hit['_source']['geoip']['country_name']
     alert['document_type'] = hit['_source']['type']
-    alert['unieke_data'] = unieke_data_sorteren_honeypot(hit)
+    alert['unieke_data'] = unieke_data_sorteren(hit)
 
     ip_to_add = hit['_source']['geoip']['ip']
     if not ip_to_add in verwerkt_ip:
@@ -285,42 +368,6 @@ def process_data_honeypot(hit):
     db.session.commit()
     return alert
 
-def get_duckhunt_data():
-    while True:
-        r = requests.get(
-            'https://webinsight.true.nl:443/api/search/universal/relative?query=trueserver_document_type%3Aduckhunt%5C-modsecurity%20OR%20trueserver_document_type%3Aduckhunt%5C-suricata&range=1&fields=*&decorate=true',
-            headers={'accept': 'application/json'}, allow_redirects=True,
-            auth=('admin', '1hil6ep6Y3jI2tfCXIKcKsTlUjnZpTj8'))
-        message = r.json()['messages']
-        if (len(message) != 0):
-            for hit in message:
-                try:
-                    if not hit in duplicate_duckhunt:
-                        verwerking = process_data_duckhunt(hit)
-                        if verwerking != None:
-                            verwerkt_duckhunt.append(verwerking)
-                            gecombineerd.append(verwerking)
-                            ungraded_events.append(verwerking)
-                    duplicate_duckhunt.append(hit)
-                except:
-                    pass
-        time.sleep(1)
-
-def get_palo_data():
-    while True:
-        r = requests.get(
-            'https://logs.true.nl:443/api/search/universal/relative?query=pa5050&range=10&decorate=true',
-            headers={'accept': 'application/json'}, allow_redirects=True,
-            auth=('yannick.soepnel@true.nl', 'Rome:Fell:0!'))
-        message = r.json()['messages']
-        # if (len(message) != 0):
-        #     for hit in message:
-        #         try:
-        #             print(hit)
-        #         except:
-        #             pass
-        time.sleep(1)
-
 def process_data_duckhunt(hit):
     alert = {}
     alert['application'] = "duckhunt"
@@ -331,13 +378,13 @@ def process_data_duckhunt(hit):
         alert['destination_ip'] = hit['message']['http_hostname']
         alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
         alert['document_type'] = "suricata"
-        alert['unieke_data'] = unieke_data_sorteren_duckhunt(hit)
+        alert['unieke_data'] = unieke_data_sorteren(hit)
     elif(hit['message']['trueserver_document_type'] == 'duckhunt-modsecurity'):
         alert['source_ip'] = hit['message']['transaction_client_ip']
         alert['destination_ip'] = hit['message']['transaction_host_ip']
         alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).name
         alert['document_type'] = "modsecurity"
-        alert['unieke_data'] = unieke_data_sorteren_duckhunt(hit)
+        alert['unieke_data'] = unieke_data_sorteren(hit)
     ip_to_add = alert['source_ip']
     if not ip_to_add in verwerkt_ip:
       verwerkt_ip[ip_to_add] = [1, alert['source_country']]
@@ -365,6 +412,41 @@ def process_data_duckhunt(hit):
     db.session.commit()
     return alert
 
+def process_data_logprocessor(hit):
+    alert = {}
+    alert['application'] = "logprocessor"
+    alert['id'] = hit['event_id']
+    alert['timestamp'] = convert_timezone_logprocessor(hit['date'] + "T" + hit['time'] + "Z")
+    alert['source_ip'] = hit['source']
+    alert['destination_ip'] = hit['destination']
+    alert['source_country'] = "Netherlands"
+    alert['document_type'] = "logprocessor"
+    alert['unieke_data'] = unieke_data_sorteren(hit)
+
+    ip_to_add = alert['source_ip']
+    if not ip_to_add in verwerkt_ip:
+        verwerkt_ip[ip_to_add] = [1, alert['source_country']]
+    else:
+        verwerkt_ip[ip_to_add][0] += 1
+    country_to_add = alert['source_country']
+    r = str(random.randint(0, 255))
+    g = str(random.randint(0, 255))
+    b = str(random.randint(0, 255))
+    color = "rgba(" + r + ", " + g + ", " + b + ")"
+    if not country_to_add in verwerkt_landen:
+        verwerkt_landen[country_to_add] = [1, color]
+    else:
+        verwerkt_landen[country_to_add][0] += 1
+    return alert
+
+def convert_timezone_logprocessor(time):
+    tijd = time
+    convert_time = datetime.datetime.strptime(tijd, '%Y-%m-%dT%H:%M:%SZ')
+    local_timezone = tzlocal.get_localzone() #Haal locale tijdzone op
+    convert = convert_time.replace(tzinfo=pytz.utc).astimezone(local_timezone)
+    converted = convert.replace(tzinfo=None) #Verwijder +02:00 aan date format
+    return converted
+
 def convert_timezone(time):
     tijd = time
     convert_time = datetime.datetime.strptime(tijd, '%Y-%m-%dT%H:%M:%S.%fZ')
@@ -373,14 +455,14 @@ def convert_timezone(time):
     converted = convert.replace(tzinfo=None) #Verwijder +02:00 aan date format
     return converted
 
-# def refresh_database():
+def refresh_database():
     global database_landen
     while True:
-        mycursor.execute("SELECT * FROM landen")
-        database_landen = mycursor.fetchall()
-        mydb.commit()
-        # print(database_landen)
-        time.sleep(3)
+        for land in database_landen:
+            pass
+            # print(land.name)
+            # print(land.score)
+        time.sleep(1)
 
 # Create two threads as follows
 try:
@@ -388,7 +470,8 @@ try:
     _thread.start_new_thread( get_duckhunt_data, ())
     _thread.start_new_thread( rekenwerk, ())
     # _thread.start_new_thread( get_palo_data, ())
-    # _thread.start_new_thread( refresh_database, ())
+    _thread.start_new_thread( refresh_database, ())
+    _thread.start_new_thread( get_logprocessor_data, ())
 except:
    print("Error: unable to start thread")
 
@@ -428,21 +511,50 @@ def combined():
 @app.route('/settings', methods=["GET", "POST"])
 def settings():
     if request.method == "POST":
+        for land in database_landen:
+            form = request.form[land.name]
+            land.score = int(form)
+            sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
+            data = (form, land.name)
+            db.engine.execute(sql, data)
+        for frequentie in database_frequentie:
+            form = request.form[frequentie.name]
+            frequentie.score = int(form)
+            sql = """UPDATE frequentie_db SET score = %s WHERE name = %s"""
+            data = (form, frequentie.name)
+            db.engine.execute(sql, data)
+
+        db.session.commit()
+        # print(form)
+        # for k,v in form.items():
+        #     for land in database_landen:
+        #         if (land.name == k):
+        #             land.score = v
+        #     sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
+        # #     data = (v, k)
+        #     db.engine.execute(sql, data)
+        #     # db.session.execute(sql, data)
+        #     db.session.commit()
+            # print(db.engine)
+    return render_template('settings.html', title='settings', database_landen=database_landen, database_frequentie=database_frequentie)
+
+@app.route('/about', methods=["GET", "POST"])
+def about():
+    if request.method == "POST":
         form = request.form
         print(form)
         for k,v in form.items():
-            sql = """UPDATE landen SET score = %s WHERE name = %s"""
+            for land in database_landen:
+                if (land.name == k):
+                    land.score = v
+            sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
             data = (v, k)
-            mycursor.execute(sql, data)
-            print(mycursor)
-    return render_template('settings.html', title='settings', database_landen=database_landen)
-
-@app.route('/about')
-def about():
-    return render_template('about.html', title='about')
-
-
-p = ['a','b','c','d']
+            db.engine.execute(sql, data)
+            # db.session.execute(sql, data)
+            db.session.commit()
+            # print(db.engine)
+    return(request.form)
+    # return render_template('settings.html', title='about')
 
 @app.route('/honeypot', methods=["GET", "POST"])
 def honeypot():
@@ -463,7 +575,7 @@ def honeypot():
     elif request.method == "POST":
         tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=1)
         print("else")
-    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, verwerkt_ip=verwerkt_ip, histogram=histogram, p=p)
+    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, lengte=lengte_honeypot, verwerkt_ip=verwerkt_ip, histogram=histogram)
 
 @app.route("/visualise")
 def visualise():

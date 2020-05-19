@@ -2,6 +2,71 @@
 
 
 {% block dropdownbutton %}
+
+<script>
+
+function SearchApplication() {
+  var input, filter, table, tr, td, x;
+  input = document.getElementById("UserInputApplication");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("AlertTable");
+  tr = table.getElementsByTagName("tr");
+
+  for (x = 0; x < tr.length; x++) {
+    td = tr[x].getElementsByTagName("td")[0];
+    if (td) {
+      if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+        tr[x].style.display = "";
+      }
+      else {
+        tr[x].style.display = "none";
+      }
+    }
+  }
+}
+
+function SearchId() {
+  var input, filter, table, tr, td, x;
+  input = document.getElementById("UserInputId");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("AlertTable");
+  tr = table.getElementsByTagName("tr");
+
+  for (x = 0; x < tr.length; x++) {
+    td = tr[x].getElementsByTagName("td")[1];
+    if (td) {
+      if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+        tr[x].style.display = "";
+      }
+      else {
+        tr[x].style.display = "none";
+      }
+    }
+  }
+}
+
+function SearchSourceIp() {
+  var input, filter, table, tr, td, x;
+  input = document.getElementById("UserInputSourceIp");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("AlertTable");
+  tr = table.getElementsByTagName("tr");
+
+  for (x = 0; x < tr.length; x++) {
+    td = tr[x].getElementsByTagName("td")[3];
+    if (td) {
+      if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+        tr[x].style.display = "";
+      }
+      else {
+        tr[x].style.display = "none";
+      }
+    }
+  }
+}
+
+
+</script>
 <form action="", class="form-inline" method="post">
               <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Selecteer tijd
               <span class="caret"></span></button>
@@ -12,15 +77,28 @@
               </ul>
 </form>
 
+
 {% endblock dropdownbutton %}
 {% block content %}
 <div class="accordion" id="accordionExample">
-    <table style="width:100px;" class="table table-striped">
+    <table style="width:100px;" class="table table-striped", id="AlertTable">
                 <tr style="text-align: left">
-                    <th>Applicatie</th>
-                    <th style="text-align: center">id</th>
+                    <th>Applicatie
+                    <div class="form-group">
+                        <input type="text" id="UserInputApplication" onkeyup="SearchApplication()" class="form-control input-lg" autocomplete="off" name="input" placeholder="Zoek op id"  autofocus>
+                    </div>
+                    </th>
+                    <th style="text-align: center">id
+                    <div class="form-group">
+                        <input type="text" id="UserInputId" onkeyup="SearchId()" class="form-control input-lg" autocomplete="off" name="input" placeholder="Zoek op id"  autofocus>
+                    </div>
+                    </th>
                     <th>Timestamp</th>
-                    <th>Source ip</th>
+                    <th>Source ip
+                    <div class="form-group">
+                        <input type="text" id="UserInputSourceIp" onkeyup="SearchSourceIp()" class="form-control input-lg" autocomplete="off" name="input" placeholder="Zoek op id"  autofocus>
+                    </div>
+                    </th>
                     <th>Destination</th>
                     <th>source country</th>
                     <th>document type</th>
@@ -39,11 +117,11 @@
                       <td>
                           <p>
 
-                              <button class="btn btn-secondary" style="width: 150px" type="button" data-toggle="collapse" data-target=#test aria-expanded="false" aria-controls="collapseExample">
-                                Meer informatie {{loop.index}}
+                              <button class="btn btn-secondary" style="width: 150px" type="button" data-toggle="collapse" data-target=#getal{{loop.index}} aria-expanded="false" aria-controls="collapseExample">
+                                Meer informatie
                               </button>
                           </p>
-                          <div class="collapse" id=test>
+                          <div class="collapse" id=getal{{loop.index}}>
                               <div class="test">
                                 <table>
                               <tr>

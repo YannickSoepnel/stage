@@ -4,43 +4,84 @@
 
 <form action="", class="form-inline" method="post">
     <div class="settings">
-    <button type="submit" class="btn btn-secondary">Submit</button>
-    <div class="settings-landen" style="height: 500px; overflow-y: auto;">
-     <table class="table table-striped">
-         <tr style="text-align: left">
-                <th>Landen</th>
-                <th>Score</th>
-         </tr>
-         {% for landen in database_landen %}
-         <tr>
-                <td>{{ landen[0] }}</td>
-                <td>
-                    <select name="{{landen[0]}}">
-                        <option value={{landen[1]}}>{{landen[1]}}</option>
-                        <option value="0">0</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                    </select>
-                </td>
-         </tr>
-         {% endfor %}
-     </table>
-    </div>
-    <div class="settings-applicatie">
-
-    </div>
-    <div class="settings-frequentie">
-    </div>
+        <button type="submit" class="btn btn-secondary">Submit</button>
+        <table>
+            <tr>
+            <td>
+            <div class="settings-landen" style="height: 500px; overflow-y: auto;">
+             <table class="table table-striped">
+                 <tr style="text-align: left">
+                        <th>Landen</th>
+                        <th>Score</th>
+                 </tr>
+                 {% for land in database_landen %}
+                 <tr>
+                        <td>{{ land.name }}</td>
+                        <td>
+                            <select name="{{land.name}}">
+                                <option value={{land.score}}>{{land.score}}</option>
+                                <option value=0>0</option>
+                                <option value=1>1</option>
+                                <option value=2>2</option>
+                                <option value=3>3</option>
+                                <option value=4>4</option>
+                                <option value=5>5</option>
+                                <option value=6>6</option>
+                                <option value=7>7</option>
+                                <option value=8>8</option>
+                                <option value=9>9</option>
+                                <option value=10>10</option>
+                            </select>
+                        </td>
+                 </tr>
+                 {% endfor %}
+             </table>
+            </div>
+            </td>
+            <div class="settings-applicatie">
+            </div>
+                <td style="width:100px"></td>
+            <td>
+            <div class="settings-frequentie" style="height: 500px; overflow-y: auto;">
+                <table class="table table-striped">
+                 <tr style="text-align: left">
+                        <th>Frequentie</th>
+                        <th>Score</th>
+                 </tr>
+                <tr>
+                 {% for frequentie in database_frequentie %}
+                    <tr><td>Tussen: {{ frequentie.waarde1 }} en {{ frequentie.waarde2 }}</td><td></td></tr>
+                    <td>{{ frequentie.name }}</td>
+                        <td>
+                            <select name="{{frequentie.name}}">
+                                <option value={{frequentie.score}}>{{frequentie.score}}</option>
+                                <option value=0>0</option>
+                                <option value=1>1</option>
+                                <option value=2>2</option>
+                                <option value=3>3</option>
+                                <option value=4>4</option>
+                                <option value=100>100</option>
+                                <option value=6>6</option>
+                                <option value=500>500</option>
+                                <option value=8>8</option>
+                                <option value=9>9</option>
+                                <option value=10>10</option>
+                            </select>
+                        </td>
+                 </tr>
+                 {% endfor %}
+             </table>
+            </div>
+            </td>
+            </tr>
+        </table>
     </div>
 </form>
+
+{% for land in database_landen %}
+    {{ land.name }}
+{% endfor %}
+
 {% endblock content %}
 
 
