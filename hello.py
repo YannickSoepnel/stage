@@ -32,15 +32,15 @@ mysql = MySQL()
 mysql.init_app(app)
 
 class landen_db(db.Model):
-    landen_id = db.Column(db.Integer, primary_key=True)
+    land_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     score = db.Column(db.Integer)
 
 class frequentie_db(db.Model):
     frequentie_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
-    waarde1 = db.Column(db.Integer)
-    waarde2 = db.Column(db.Integer)
+    value1 = db.Column(db.Integer)
+    value2 = db.Column(db.Integer)
     score = db.Column(db.Integer)
 
 class alerts_db(db.Model):
@@ -50,6 +50,7 @@ class alerts_db(db.Model):
     timestamp = db.Column(db.DateTime)
     source_ip = db.Column(db.String(255))
     destination_ip = db.Column(db.String(255))
+    source_country = db.Column(db.String(255))
     document_type = db.Column(db.String(255))
     unieke_data = db.Column(db.Text)
 
@@ -59,24 +60,24 @@ class alerts_db(db.Model):
 #     if(len(frequentie) == 0):
 #         nieuwe_frequentie = frequentie_db(
 #             name = "Eerste frequentie",
-#             waarde1 = 1,
-#             waarde2 = 10,
+#             value1 = 1,
+#             value2 = 10,
 #             score = 1
 #         )
 #         db.session.add(nieuwe_frequentie)
 #     elif(len(frequentie) == 1):
 #         nieuwe_frequentie = frequentie_db(
 #             name="Tweede frequentie",
-#             waarde1=10,
-#             waarde2=100,
+#             value1=10,
+#             value2=100,
 #             score=1
 #         )
 #         db.session.add(nieuwe_frequentie)
 #     elif(len(frequentie) == 2):
 #         nieuwe_frequentie = frequentie_db(
 #             name="Derde frequentie",
-#             waarde1=100,
-#             waarde2=1000,
+#             value1=100,
+#             value2=1000,
 #             score=1
 #         )
 #         db.session.add(nieuwe_frequentie)
@@ -307,20 +308,25 @@ def rekenwerk():
         #   {'IP-adres': [LAND, FREQUENTIE, APPLICATIE]}
         #
         for alert in ungraded_events:
-            host_grade_ip = alert['source_ip']
-            for land in database_landen:
-                if(land.name == alert['source_country']):
-                    host_grade[host_grade_ip] = [land.score, 0, 0]
-            for frequentie in database_frequentie:
-                if(frequentie.frequentie_id == 1):
-                    if (verwerkt_ip[host_grade_ip][0] <= frequentie.waarde2):
-                        host_grade[host_grade_ip][1] = frequentie.score
-                elif(frequentie.frequentie_id == 2):
-                    if(frequentie.waarde1 <= verwerkt_ip[host_grade_ip][0] <= frequentie.waarde2):
-                        host_grade[host_grade_ip][1] = frequentie.score
-                elif(frequentie.frequentie_id == 2):
-                    if(frequentie.waarde1 <= verwerkt_ip[host_grade_ip][0] <= frequentie.waarde2):
-                        host_grade[host_grade_ip][1] = frequentie.score
+            try:
+                host_grade_ip = alert['source_ip']
+                for land in database_landen:
+                    if(land.name == alert['source_country']):
+                        host_grade[host_grade_ip] = [land.score, 0, 0]
+                for frequentie in database_frequentie:
+                    if(frequentie.frequentie_id == 1):
+                        if (verwerkt_ip[host_grade_ip][0] <= frequentie.value2):
+                            host_grade[host_grade_ip][1] = frequentie.score
+                    elif(frequentie.frequentie_id == 2):
+                        if(frequentie.value1 <= verwerkt_ip[host_grade_ip][0] <= frequentie.value2):
+                            host_grade[host_grade_ip][1] = frequentie.score
+                    elif(frequentie.frequentie_id == 3):
+                        if(frequentie.value1 <= verwerkt_ip[host_grade_ip][0]):
+                            host_grade[host_grade_ip][1] = frequentie.score
+            except:
+                print("Error rekenwerk")
+                print(alert)
+                pass
             # if(alert['application'] == 'honeypot'): #Hogere score als alert van honeypot is
             #     host_grade[host_grade_ip][2] = 10
             # elif(alert['application'] == 'duckhunt'):
@@ -335,17 +341,19 @@ def process_data_honeypot(hit):
     alert['timestamp'] = convert_timezone(hit['_source']['@timestamp'])
     alert['source_ip'] = hit['_source']['geoip']['ip']
     alert['destination_ip'] = hit['_source']['dest_ip']
-    alert['source_country'] = hit['_source']['geoip']['country_name']
+    if(hit['_source']['geoip']['country_name'] == "Republic of Moldova"):
+        alert['source_country'] = "Moldova"
+    else:
+        alert['source_country'] = hit['_source']['geoip']['country_name']
     alert['document_type'] = hit['_source']['type']
     alert['unieke_data'] = unieke_data_sorteren(hit)
-
     ip_to_add = hit['_source']['geoip']['ip']
     if not ip_to_add in verwerkt_ip:
-        verwerkt_ip[ip_to_add] = [1, hit['_source']['geoip']['country_name']]
+        verwerkt_ip[ip_to_add] = [1, alert['source_country']]
     else:
         verwerkt_ip[ip_to_add][0] += 1
 
-    country_to_add = hit['_source']['geoip']['country_name']
+    country_to_add = alert['source_country']
     r = str(random.randint(0, 255))
     g = str(random.randint(0, 255))
     b = str(random.randint(0, 255))
@@ -361,6 +369,7 @@ def process_data_honeypot(hit):
         timestamp = alert['timestamp'],
         source_ip = alert['source_ip'],
         destination_ip = alert['destination_ip'],
+        source_country=alert['source_country'],
         document_type = alert['document_type'],
         unieke_data = str(alert['unieke_data'])
     )
@@ -376,13 +385,35 @@ def process_data_duckhunt(hit):
     if(hit['message']['trueserver_document_type'] == 'duckhunt-suricata'):
         alert['source_ip'] = hit['message']['http_xff']
         alert['destination_ip'] = hit['message']['http_hostname']
-        alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
+        if (hit['message']['http_xff_country_code'] == 'RU'):
+            alert['source_country'] = "Russia"
+        elif(hit['message']['http_xff_country_code'] == 'TW'):
+            alert['source_country'] = "Taiwan"
+        elif (hit['message']['http_xff_country_code'] == 'IR'):
+            alert['source_country'] = "Iran"
+        else:
+            try:
+                alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).common_name
+            except:
+                alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
+        # alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
         alert['document_type'] = "suricata"
         alert['unieke_data'] = unieke_data_sorteren(hit)
     elif(hit['message']['trueserver_document_type'] == 'duckhunt-modsecurity'):
         alert['source_ip'] = hit['message']['transaction_client_ip']
         alert['destination_ip'] = hit['message']['transaction_host_ip']
-        alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).name
+        if (hit['message']['transaction_client_ip_country_code'] == 'RU'):
+            alert['source_country'] = "Russia"
+        elif(hit['message']['transaction_client_ip_country_code'] == 'TW'):
+            alert['source_country'] = "Taiwan"
+        elif(hit['message']['transaction_client_ip_country_code'] == 'IR'):
+            alert['source_country'] = "Iran"
+        else:
+            try:
+                alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).common_name
+            except:
+                alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).name
+        # alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['transaction_client_ip_country_code']).name
         alert['document_type'] = "modsecurity"
         alert['unieke_data'] = unieke_data_sorteren(hit)
     ip_to_add = alert['source_ip']
@@ -405,11 +436,13 @@ def process_data_duckhunt(hit):
         timestamp=alert['timestamp'],
         source_ip=alert['source_ip'],
         destination_ip=alert['destination_ip'],
+        source_country=alert['source_country'],
         document_type=alert['document_type'],
         unieke_data=str(alert['unieke_data'])
     )
     db.session.add(new_alert)
     db.session.commit()
+    print(alert)
     return alert
 
 def process_data_logprocessor(hit):
@@ -471,7 +504,7 @@ try:
     _thread.start_new_thread( rekenwerk, ())
     # _thread.start_new_thread( get_palo_data, ())
     _thread.start_new_thread( refresh_database, ())
-    _thread.start_new_thread( get_logprocessor_data, ())
+    # _thread.start_new_thread( get_logprocessor_data, ())
 except:
    print("Error: unable to start thread")
 
@@ -513,15 +546,21 @@ def settings():
     if request.method == "POST":
         for land in database_landen:
             form = request.form[land.name]
-            land.score = int(form)
+            if(form == ''):
+                land.score = land.score
+            else:
+                land.score = int(form)
             sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
-            data = (form, land.name)
+            data = (land.score, land.name)
             db.engine.execute(sql, data)
         for frequentie in database_frequentie:
             form = request.form[frequentie.name]
-            frequentie.score = int(form)
+            if(form == ''):
+                frequentie.score = frequentie.score
+            else:
+                frequentie.score = int(form)
             sql = """UPDATE frequentie_db SET score = %s WHERE name = %s"""
-            data = (form, frequentie.name)
+            data = (frequentie.score, frequentie.name)
             db.engine.execute(sql, data)
 
         db.session.commit()

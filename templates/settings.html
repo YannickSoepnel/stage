@@ -18,20 +18,7 @@
                  <tr>
                         <td>{{ land.name }}</td>
                         <td>
-                            <select name="{{land.name}}">
-                                <option value={{land.score}}>{{land.score}}</option>
-                                <option value=0>0</option>
-                                <option value=1>1</option>
-                                <option value=2>2</option>
-                                <option value=3>3</option>
-                                <option value=4>4</option>
-                                <option value=5>5</option>
-                                <option value=6>6</option>
-                                <option value=7>7</option>
-                                <option value=8>8</option>
-                                <option value=9>9</option>
-                                <option value=10>10</option>
-                            </select>
+                            <input name="{{land.name}}" placeholder="{{land.score}}">
                         </td>
                  </tr>
                  {% endfor %}
@@ -50,23 +37,10 @@
                  </tr>
                 <tr>
                  {% for frequentie in database_frequentie %}
-                    <tr><td>Tussen: {{ frequentie.waarde1 }} en {{ frequentie.waarde2 }}</td><td></td></tr>
+                    <tr><td>Tussen: {{ frequentie.value1 }} en {{ frequentie.value2 }}</td><td></td></tr>
                     <td>{{ frequentie.name }}</td>
                         <td>
-                            <select name="{{frequentie.name}}">
-                                <option value={{frequentie.score}}>{{frequentie.score}}</option>
-                                <option value=0>0</option>
-                                <option value=1>1</option>
-                                <option value=2>2</option>
-                                <option value=3>3</option>
-                                <option value=4>4</option>
-                                <option value=100>100</option>
-                                <option value=6>6</option>
-                                <option value=500>500</option>
-                                <option value=8>8</option>
-                                <option value=9>9</option>
-                                <option value=10>10</option>
-                            </select>
+                                <input name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
                         </td>
                  </tr>
                  {% endfor %}
