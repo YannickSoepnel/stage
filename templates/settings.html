@@ -8,7 +8,7 @@
         <table>
             <tr>
             <td>
-            <div class="settings-landen" style="height: 500px; overflow-y: auto;">
+            <div class="settings-landen" style="width: 300px; height: 500px; overflow-y: auto;">
              <table class="table table-striped">
                  <tr style="text-align: left">
                         <th>Landen</th>
@@ -18,44 +18,85 @@
                  <tr>
                         <td>{{ land.name }}</td>
                         <td>
-                            <input name="{{land.name}}" placeholder="{{land.score}}">
+                            <input name="{{land.name}}" placeholder="{{land.score}}" style="width: 50px;">
                         </td>
                  </tr>
                  {% endfor %}
              </table>
             </div>
             </td>
-            <div class="settings-applicatie">
-            </div>
-                <td style="width:100px"></td>
+                <td style="width:10px"></td>
             <td>
-            <div class="settings-frequentie" style="height: 500px; overflow-y: auto;">
+                <div class="settings-rules" style="width: 400px; height: 500px; overflow-y: auto;">
+                    <table class="table table-striped">
+                         <tr style="text-align: left">
+                                <th>Regels</th>
+                                <th>Prefix</th>
+                                <th>Score</th>
+                         </tr>
+                         {% for rule in database_rules %}
+                         <tr>
+                                <td>{{ rule.name }}</td>
+                                <td>{{ rule.rule_code }}</td>
+                                <td>
+                                    <input name="a{{rule.rule_code}}" placeholder="{{rule.score}}" style="width: 50px;">
+                                </td>
+                         </tr>
+                         {% endfor %}
+                     </table>
+                </div>
+            </td>
+                <td style="width:10px"></td>
+            <td>
+            <div class="settings-frequentie" style="width: 250px; height: 500px; overflow-y: auto;">
                 <table class="table table-striped">
                  <tr style="text-align: left">
-                        <th>Frequentie</th>
-                        <th>Score</th>
+                        <th>Velden</th>
+                        <th>Waardes</th>
                  </tr>
                 <tr>
-                 {% for frequentie in database_frequentie %}
-                    <tr><td>Tussen: {{ frequentie.value1 }} en {{ frequentie.value2 }}</td><td></td></tr>
-                    <td>{{ frequentie.name }}</td>
-                        <td>
-                                <input name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
-                        </td>
+                 {% for frequentie in database_frequenties %}
+                <tr>
+                    <td>Tussen:</td>
+                    <td>
+<!--                        <input style="width: 50px;" name="{{frequentie.name}}" placeholder="{{frequentie.value1}}">-->
+                        <input style="width: 50px;"name="a{{frequentie.value1}}" placeholder="{{frequentie.value1}}">
+                        en
+                        <input style="width: 50px;" name="a{{frequentie.value2}}" placeholder="{{frequentie.value2}}">
+                    </td>
+                </tr>
+                    <td>Score:</td>
+                    <td>
+                        <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
+                    </td>
                  </tr>
                  {% endfor %}
              </table>
             </div>
+            </td>
+                <td style="width:10px"></td>
+            <td>
+                <div class="settings-applicatie" style="width: 300px; height: 500px; overflow-y: auto;">
+                    <table class="table table-striped">
+                         <tr style="text-align: left">
+                                <th>Applicatie</th>
+                                <th>Score</th>
+                         </tr>
+                         {% for applicatie in database_applicaties %}
+                         <tr>
+                                <td>{{ applicatie.name }}</td>
+                                <td>
+                                    <input name="{{applicatie.name}}" placeholder="{{applicatie.score}}" style="width: 50px;">
+                                </td>
+                         </tr>
+                         {% endfor %}
+                     </table>
+                </div>
             </td>
             </tr>
         </table>
     </div>
 </form>
-
-{% for land in database_landen %}
-    {{ land.name }}
-{% endfor %}
-
 {% endblock content %}
 
 

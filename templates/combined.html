@@ -116,7 +116,6 @@ function SearchSourceIp() {
                       <td>{{ alert.document_type }} </td>
                       <td>
                           <p>
-
                               <button class="btn btn-secondary" style="width: 150px" type="button" data-toggle="collapse" data-target=#getal{{loop.index}} aria-expanded="false" aria-controls="collapseExample">
                                 Meer informatie
                               </button>
@@ -124,14 +123,14 @@ function SearchSourceIp() {
                           <div class="collapse" id=getal{{loop.index}}>
                               <div class="test">
                                 <table>
-                              <tr>
-                                  <th>Key</th>
-                                  <th>Value</th>
-                              </tr>
-                                {% for key, value in alert.unieke_data.items() %}
-                                        <tr><td>{{key}}</td> <td>{{ value }}</td></tr>
-                                {% endfor %}
-                          </table>
+                                  <tr>
+                                      <th>Key</th>
+                                      <th>Value</th>
+                                  </tr>
+                                    {% for key, value in alert.unieke_data.items() %}
+                                            <tr><td>{{key}}</td> <td>{{ value }}</td></tr>
+                                    {% endfor %}
+                                </table>
                               </div>
                           </div>
                       </td>
@@ -140,6 +139,15 @@ function SearchSourceIp() {
             {% endfor %}
     </table>
     </div>
+<!--    {% for alert in alert_list %}-->
+<!--&lt;!&ndash;        {{alert}}&ndash;&gt;-->
+<!--        {{alert.application}}-->
+<!--        {{alert.id}}-->
+<!--        {{alert.timestamp}}-->
+<!--        {{alert.source_ip}}-->
+<!--        {{alert.destination_ip}}-->
+<!--        {{alert.document_type}}-->
+<!--    {% endfor %}-->
 {% endblock content %}
 
 

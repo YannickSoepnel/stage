@@ -152,12 +152,14 @@
                     <th>IP</th>
                     <th>Land score</th>
                     <th>Frequentie score</th>
+                    <th>Totaal</th>
                 </tr>
            {% for key in host_grade %}
                 <tr>
                   <td>{{ key }}</td>
                   <td>{{ host_grade[key][0] }}</td>
                   <td>{{ host_grade[key][1] }}</td>
+                  <td>{{host_grade[key][0] + host_grade[key][1]}}</td>
                  </tr>
             {% endfor %}
 </table>
