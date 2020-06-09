@@ -10,7 +10,7 @@
     <div class="visualise-left-border"><br></div>
 <div class="visualise-left">
     <div class="canvas-container">
-        <center><b>Top 10 aanvallers</b></center>
+        <center><b>Top 15 aanvallers</b></center>
         <div class="tabel">
             <br>
             <table style="width:100%">
@@ -19,7 +19,7 @@
                     <th>Frequentie</th>
                     <th>Land</th>
                 </tr>
-           {% for key in sorted_d[:10] %}
+           {% for key in sorted_d_verwerkt_ip[:15] %}
                 <tr>
                   <td>{{ key[0] }}</td>
                   <td>{{ key[1][0] }}</td>
@@ -31,21 +31,18 @@
     </div>
     <div class="canvas-histogram">
         <center><b>Histogram van alerts</b></center>
-    <canvas id="myChart3" width="500" height="400"></canvas>
+    <canvas id="myChart3" width="500" height="500"></canvas>
     </div>
 </div>
 
 <div class="visualise-right">
     <div class="canvas-landen">
         <center><b>Piechart aanval landen</b></center>
-    <canvas id="myChart2" width="500" height="400"></canvas>
+    <canvas id="myChart2" width="500" height="724"></canvas>
     <div id="js-legend" class="chart-legend">
     </div>
     </div>
-    <div class="canvas-attacks">
-        <center><b>Aantal aanvallen t.o.v. unique source ips</b></center>
-    <canvas id="myChart4" width="500" height="400"></canvas>
-    </div>
+
 </div>
 </div>
     <script>
@@ -56,18 +53,18 @@
         // define the chart data
 
         var chartData2 = {
-          labels : [{% for item in verwerkt_landen %}
-                       "{{item}}",
+          labels : [{% for item in sorted_d_verwerkt_land[:10] %}
+                       "{{item[0]}}",
                      {% endfor %}],
           datasets : [{
               label: '{{ legend }}',
               fill: true,
               lineTension: 0.1,
-              backgroundColor: [{% for key in verwerkt_landen %}
-                                   "{{verwerkt_landen[key][1]}}",
+              backgroundColor: [{% for item in sorted_d_verwerkt_land %}
+                                   "{{item[1][1]}}",
                                    {% endfor %}],
-              data : [{% for key in verwerkt_landen %}
-                           {{verwerkt_landen[key][0]}},
+              data : [{% for item in sorted_d_verwerkt_land[:10] %}
+                           {{item[1][0]}},
                       {% endfor %}],
               spanGaps: false
           }]
@@ -89,23 +86,10 @@
           }]
         }
 
-        var chartData4 = {
-          labels : ["Attacks", "Unique src ip"],
-          datasets : [{
-              label: '{{ legend }}',
-              fill: true,
-              lineTension: 0.1,
-              backgroundColor:
-              ["rgba(75,192,192,0.4)",  "rgba(75,0,192,0.4)"],
-              data : ["{{lengte['lengte']}}", "{{lengte_unique_ips}}"],
-              spanGaps: false
-          }]
-        }
 
         // get chart canvas
         var ctx2 = document.getElementById("myChart2").getContext("2d");
         var ctx3 = document.getElementById("myChart3").getContext("2d");
-        var ctx4 = document.getElementById("myChart4").getContext("2d");
 
 
         var myChart2 = new Chart(ctx2, {
@@ -136,30 +120,26 @@
           }
         });
 
-        var myChart4 = new Chart(ctx4, {
-          type: 'horizontalBar',
-          data: chartData4,
-        });
-
-
     document.getElementById('js-legend').innerHTML = myChart2.generateLegend();
     </script>
-
-
 
 <table>
                 <tr>
                     <th>IP</th>
                     <th>Land score</th>
                     <th>Frequentie score</th>
+                    <th>Applicatie score</th>
+                    <th>Rule score</th>
                     <th>Totaal</th>
                 </tr>
            {% for key in host_grade %}
                 <tr>
                   <td>{{ key }}</td>
-                  <td>{{ host_grade[key][0] }}</td>
-                  <td>{{ host_grade[key][1] }}</td>
-                  <td>{{host_grade[key][0] + host_grade[key][1]}}</td>
+                  <td>{{ host_grade[key][0][0] }}</td>
+                  <td>{{ host_grade[key][0][1] }}</td>
+                  <td>{{ host_grade[key][0][2] }}</td>
+                  <td>{{ host_grade[key][0][3] }}</td>
+                  <td>{{ host_grade[key][0][0] + host_grade[key][0][1] + host_grade[key][0][2] + host_grade[key][0][3] }}</td>
                  </tr>
             {% endfor %}
 </table>

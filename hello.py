@@ -14,14 +14,25 @@ import pycountry
 from flaskext.mysql import MySQL
 from flask_sqlalchemy import SQLAlchemy
 from geoip import geolite2
+import traceback
+from sqlalchemy import *
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 urllib3.disable_warnings()
 
 app = Flask(__name__)
 
 db = SQLAlchemy(app)
+db2 = SQLAlchemy(app)
+db3 = SQLAlchemy(app)
+db4 = SQLAlchemy(app)
+db5 = SQLAlchemy(app)
 
-SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:ihvhbs93@localhost/stageproject"
+engine = create_engine("mysql+pymysql://root:ihvhbs93@localhost/stageproject", pool_pre_ping=True)
+
+Session = scoped_session(sessionmaker(engine, autoflush=True, expire_on_commit = False))
+
+SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:ihvhbs93@localhost/stageproject?charset=utf8mb4"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -51,87 +62,41 @@ class alerts_db(db.Model):
     destination_ip = db.Column(db.String(255))
     source_country = db.Column(db.String(255))
     document_type = db.Column(db.String(255))
-    unieke_data = db.Column(db.Text)
+    unieke_data = db.Column(db.Text(4294000000))
 
-class rules_db(db.Model):
-    rule_db_id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-    rule_code = db.Column(db.Integer)
-    score = db.Column(db.Integer)
-    count = db.Column(db.Integer)
+class rules_db(db3.Model):
+    rule_db_id = db3.Column(db.Integer, primary_key=True)
+    name = db3.Column(db.String(255))
+    rule_code = db3.Column(db.Integer, unique=True)
+    score = db3.Column(db.Integer)
+    count = db3.Column(db.Integer)
 
 class applicaties_db(db.Model):
     applicatie_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     score = db.Column(db.Integer)
 
+class acties_db(db.Model):
+    actie_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    score1 = db.Column(db.Integer)
+    score2 = db.Column(db.Integer)
+
 #Laad alle database gegevens in lijsten
 database_landen = landen_db.query.all()
+database_alerts = alerts_db.query.all()
 database_frequenties = frequenties_db.query.all()
 database_rules = rules_db.query.order_by(rules_db.count.desc()).all()
 # database_rules = rules_db.query.all()
 database_applicaties = applicaties_db.query.all()
+database_acties = acties_db.query.all()
 
-# frequentie = frequentie_db.query.all()
-#
-# if(len(frequentie) <= 2):
-#     if(len(frequentie) == 0):
-#         nieuwe_frequentie = frequentie_db(
-#             name = "Eerste frequentie",
-#             value1 = 1,
-#             value2 = 10,
-#             score = 1
-#         )
-#         db.session.add(nieuwe_frequentie)
-#     elif(len(frequentie) == 1):
-#         nieuwe_frequentie = frequentie_db(
-#             name="Tweede frequentie",
-#             value1=10,
-#             value2=100,
-#             score=1
-#         )
-#         db.session.add(nieuwe_frequentie)
-#     elif(len(frequentie) == 2):
-#         nieuwe_frequentie = frequentie_db(
-#             name="Derde frequentie",
-#             value1=100,
-#             value2=1000,
-#             score=1
-#         )
-#         db.session.add(nieuwe_frequentie)
-#     db.session.commit()
-#
-land = landen_db.query.all()
-# #
-# # print(len(land))
-# #
-# if(len(land) <= 248):
-#     for country in pycountry.countries:
-#         score = 0
-#         try:
-#             print(country.common_name)
-#             nieuw_land = landen_db(
-#                 name = country.common_name,
-#                 score = score
-#             )
-#             db.session.add(nieuw_land)
-#         except:
-#             nieuw_land = landen_db(
-#                 name=country.name,
-#                 score=score
-#             )
-#             db.session.add(nieuw_land)
-#         db.session.commit()
-# for frequentie in database_frequentie:
-#     print(frequentie.frequentie_id)
-#     print(frequentie.score)
-
-# Define a function for the thread
 duplicate_honeypot = []
 verwerkt_honeypot = []
 verwerkt_ip = {}
 verwerkt_landen = {}
 duplicate_duckhunt = []
+duplicate_process_duckhunt = []
 verwerkt_duckhunt = []
 verwerkt_logprocessor = []
 duplicate_logprocessor = []
@@ -142,16 +107,26 @@ lengte_unique_ips = 0
 gecombineerd = []
 ungraded_events = []
 host_grade = {}
+host_grade_log = {}
+host_grade_alert = {}
+host_grade_ban = {}
 
 data_visualise = []
 labels_visualise = []
-sorted_d = []
+sorted_d_verwerkt_ip = []
+sorted_d_verwerkt_land = []
 sorted_histogram = []
+
+actie_log = []
+actie_alert = []
+actie_ban = []
+
 count_meer_informatie = 0
 
 count = 0
 histogram = {}
 time_seconden_ophogen = 0
+error_rekenwerk = []
 
 
 tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
@@ -234,7 +209,7 @@ def get_palo_data():
 def get_logprocessor_data():
     while True:
         r = requests.get(
-            'https://logprocessor.true.nl/abuser/get_security_alerts?timeframe=10'
+            'https://logprocessor.true.nl/abuser/get_security_alerts?timeframe=1'
         )
         message = r.json()
 
@@ -279,7 +254,7 @@ def unieke_data_sorteren(data):
     return unieke_data_duckhunt
 
 def rekenwerk():
-    global count, time_seconden_ophogen, lengte_unique_ips, sorted_d, sorted_histogram
+    global count, time_seconden_ophogen, lengte_unique_ips, sorted_d_verwerkt_ip, sorted_histogram, sorted_d_verwerkt_land, error_rekenwerk
 
     time1 = datetime.datetime.now()
     time2 = datetime.datetime.now() - datetime.timedelta(seconds=60)
@@ -291,7 +266,8 @@ def rekenwerk():
         # VISUALISEREN REKENWERK
         lengte_unique_ips = len(verwerkt_ip) #lengte van unique source ips
 
-        sorted_d = sorted(verwerkt_ip.items(), key=lambda x: x[1], reverse=True) #Gesorteerde lijst voor top 10 aanvallers tabel
+        sorted_d_verwerkt_ip = sorted(verwerkt_ip.items(), key=lambda x: x[1], reverse=True) #Gesorteerde lijst voor top 10 aanvallers tabel
+        sorted_d_verwerkt_land = sorted(verwerkt_landen.items(), key=lambda x: x[1], reverse=True)
 
         #Labels voor pie chart landen met aantal keer aanval
         for key in verwerkt_ip:
@@ -316,7 +292,7 @@ def rekenwerk():
 
         #Grading events
         #
-        #   host_grade[IP-adres] = [APPLICATIE, LAND, RULE_ID, FREQUENTIE]
+        #   host_grade[IP-adres] = [LAND, FREQUENTIE, APPLICATIE , RULE_ID]
         #
         #   {'IP-adres': [LAND, FREQUENTIE, APPLICATIE]}
         #
@@ -325,19 +301,47 @@ def rekenwerk():
                 host_grade_ip = alert['source_ip']
                 for land in database_landen:
                     if (land.name == alert['source_country']):
-                        host_grade[host_grade_ip] = [land.score, 0, 0]
+                        host_grade[host_grade_ip] = [land.score, 0, 0, 0],[alert['timestamp'], alert['source_country'], alert['application']]
                 for frequentie in database_frequenties:
                     if(frequentie.frequentie_id == 1):
                         if (verwerkt_ip[host_grade_ip][0] <= frequentie.value2):
-                            host_grade[host_grade_ip][1] = frequentie.score
+                            host_grade[host_grade_ip][0][1] = frequentie.score
                     elif(frequentie.frequentie_id == 2):
                         if(frequentie.value1 <= verwerkt_ip[host_grade_ip][0] <= frequentie.value2):
-                            host_grade[host_grade_ip][1] = frequentie.score
+                            host_grade[host_grade_ip][0][1] = frequentie.score
                     elif(frequentie.frequentie_id == 3):
                         if(frequentie.value1 <= verwerkt_ip[host_grade_ip][0]):
-                            host_grade[host_grade_ip][1] = frequentie.score
+                            host_grade[host_grade_ip][0][1] = frequentie.score
+                for applicatie in database_applicaties:             #Grading op basis van applicatie
+                    if(applicatie.name == alert['application']):
+                        if(alert['application'] == 'duckhunt'):
+                            host_grade[host_grade_ip][0][2] = applicatie.score
+                            for rule in database_rules:                 #Grading op basis van getriggerde rule
+                                if(str(rule.rule_code) == alert['rule_id']):
+                                    host_grade[host_grade_ip][0][3] = rule.score
+                        host_grade[host_grade_ip][0][2] = applicatie.score
+                total_score = host_grade[host_grade_ip][0][0] + host_grade[host_grade_ip][0][1] + host_grade[host_grade_ip][0][2] + host_grade[host_grade_ip][0][3]
+                for actie in database_acties:
+                    if(actie.actie_id == 1):
+                        if(total_score < actie.score2):
+                            host_grade_log[host_grade_ip] = host_grade[host_grade_ip]
+                    elif(actie.actie_id == 2):
+                        if(actie.score1 <= total_score <= actie.score2):
+                            host_grade_alert[host_grade_ip] = host_grade[host_grade_ip]
+                            try:
+                                del host_grade_log[host_grade_ip]
+                            except:
+                                pass
+                    elif(actie.actie_id == 3):
+                        if(actie.score1 <= total_score):
+                            host_grade_ban[host_grade_ip] = host_grade[host_grade_ip]
+                            try:
+                                del host_grade_alert[host_grade_ip]
+                            except:
+                                pass
             except:
                 print("Error rekenwerk")
+                error_rekenwerk.append(alert)
                 print(alert)
                 pass
             # if(alert['application'] == 'honeypot'): #Hogere score als alert van honeypot is
@@ -365,6 +369,7 @@ def rekenwerk():
         time.sleep(1)
 
 def process_data_honeypot(hit):
+    global database_alerts
     alert = {}
     alert['application'] = "honeypot"
     alert['id'] = hit['_id']
@@ -374,7 +379,7 @@ def process_data_honeypot(hit):
     if(hit['_source']['geoip']['country_name'] == "Republic of Moldova"):
         alert['source_country'] = "Moldova"
     elif(hit['_source']['geoip']['country_name'] == 'Republic of Korea'):
-        alert['source_country'] = "Korea, Democratic People's Republic of"
+        alert['source_country'] = "Korea, Republic of"
     elif(hit['_source']['geoip']['country_name'] == 'Iran'):
         alert['source_country'] = "Iran, Islamic Republic of"
     else:
@@ -407,12 +412,13 @@ def process_data_honeypot(hit):
         document_type = alert['document_type'],
         unieke_data = str(alert['unieke_data'])
     )
-    db.session.add(new_alert)
-    db.session.commit()
+    db2.session.add(new_alert)
+    db2.session.commit()
+    db2.session.close()
     return alert
 
 def process_data_duckhunt(hit):
-    global database_rules
+    global database_rules, duplicate_process_duckhunt, database_alerts
     alert = {}
     alert['application'] = "duckhunt"
     alert['id'] = hit['message']['_id']
@@ -421,46 +427,86 @@ def process_data_duckhunt(hit):
         try:
             alert['source_ip'] = hit['message']['http_xff']
             alert['destination_ip'] = hit['message']['http_hostname']
-            if (hit['message']['http_xff_country_code'] == 'RU'):
-                alert['source_country'] = "Russia"
-            elif (hit['message']['http_xff_country_code'] == 'TW'):
-                alert['source_country'] = "Taiwan"
-            # elif (hit['message']['http_xff_country_code'] == 'IR'):
-            #     alert['source_country'] = "Iran, Islamic Republic of"
-            elif (hit['message']['http_xff_country_code'] == 'KR'):
-                alert['source_country'] = "Korea, Democratic People's Republic of"
-            else:
-                try:
-                    alert['source_country'] = pycountry.countries.get(
-                        alpha_2=hit['message']['http_xff_country_code']).common_name
-                except:
-                    alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
+            try:
+                if (hit['message']['http_xff_country_code'] == 'RU'):
+                    alert['source_country'] = "Russia"
+                elif (hit['message']['http_xff_country_code'] == 'TW'):
+                    alert['source_country'] = "Taiwan"
+                # elif (hit['message']['http_xff_country_code'] == 'IR'):
+                #     alert['source_country'] = "Iran, Islamic Republic of"
+                elif (hit['message']['http_xff_country_code'] == 'KR'):
+                    alert['source_country'] = "Korea, Republic of"
+                else:
+                    try:
+                        alert['source_country'] = pycountry.countries.get(
+                            alpha_2=hit['message']['http_xff_country_code']).common_name
+                    except:
+                        alert['source_country'] = pycountry.countries.get(alpha_2=hit['message']['http_xff_country_code']).name
+            except KeyError:
+                match = geolite2.lookup(hit['message']['http_xff'])
+                if match is not None:
+                    try:
+                        alert['source_country'] = pycountry.countries.get(
+                            alpha_2=match.country).common_name
+                    except:
+                        alert['source_country'] = pycountry.countries.get(
+                            alpha_2=match.country).name
+                    print("except land gevonden suricata")
+                    print(alert['source_country'])
+                else:
+                    alert['source_country'] = 'None'
             try:
                 alert['rule_id'] = hit['message']['alert_signature_id']
-                if (db.session.query(rules_db.rule_code).filter_by(rule_code=alert['rule_id']).scalar() is not None):
-                    # print("Suricata dubbel")
-                    rule = rules_db.query.filter_by(rule_code=alert['rule_id']).first()
-                    rule.count += 1
-                    db.session.commit()
+                if (db3.session.query(rules_db.rule_code).filter_by(rule_code=alert['rule_id']).scalar() is not None):
+                    sql = """UPDATE rules_db SET count = count + 1 WHERE rule_code = %s"""
+                    data = alert['rule_id']
+                    db3.engine.execute(sql, data)
+                    # db.session.commit()
                 else:
-                    new_rule = rules_db(
-                        name=hit['message']['alert_category'],
-                        rule_code=int(hit['message']['alert_signature_id']),
-                        score=1,
-                        count=1
-                    )
-                    db.session.add(new_rule)
-                    database_rules = rules_db.query.order_by(rules_db.count.desc()).all()
-                    print(database_rules)
-                    db.session.commit()
-            except:
-                print("Geen rule_id gevonden suricata")
+                    # try:
+                        new_rule = rules_db(
+                            name=hit['message']['alert_signature'],
+                            rule_code=int(hit['message']['alert_signature_id']),
+                            score=1,
+                            count=1
+                        )
+                        db3.session.add(new_rule)
+                        # db.session.commit()
+                        print(alert['rule_id'])
+                        print('nieuwe rule geadd')
+                        print(hit)
+                    # except:
+                    #     db.session.rollback()
+                    #     print("Dubbele snelle entry gevonden")
+                    #     print(hit)
+                    #     sql = """UPDATE rules_db SET count = count + 1 WHERE rule_code = %s"""
+                    #     data = alert['rule_id']
+                    #     db.engine.execute(sql, data)
+                    #     db.session.commit()
+                    #     print("Na db commit")
+                    # new_rule = rules_db(
+                    #     name=hit['message']['alert_signature'],
+                    #     rule_code=int(hit['message']['alert_signature_id']),
+                    #     score=1,
+                    #     count=1
+                    # )
+                    # db.session.add(new_rule)
+                    # database_rules = rules_db.query.order_by(rules_db.count.desc()).all()
+                    # print(database_rules)
+                    # db.session.commit()
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
+                print("Geen rule_id gevonden modsecurity")
+                # db.session.rollback()
                 print(hit)
         except KeyError:
             print("Suricata Geen source-ip of host-ip gevonden")
             return None
         alert['document_type'] = "suricata"
+        # alert['unieke_data'] = "test"
         alert['unieke_data'] = unieke_data_sorteren(hit)
+
     elif (hit['message']['trueserver_document_type'] == 'duckhunt-modsecurity'):
         try:
             alert['source_ip'] = hit['message']['transaction_client_ip']
@@ -470,6 +516,8 @@ def process_data_duckhunt(hit):
                     alert['source_country'] = "Russia"
                 elif (hit['message']['transaction_client_ip_country_code'] == 'TW'):
                     alert['source_country'] = "Taiwan"
+                elif (hit['message']['transaction_client_ip_country_code'] == 'KR'):
+                    alert['source_country'] = "Korea, Republic of"
                 else:
                     try:
                         alert['source_country'] = pycountry.countries.get(
@@ -489,41 +537,52 @@ def process_data_duckhunt(hit):
                     print(alert['source_country'])
                 else:
                     alert['source_country'] = 'None'
-                    # print("Kon geen land achterhalen")
             try:
-                print("Proberen")
-                print(hit)
                 alert['rule_id'] = hit['message']['ruleId']
-                if (db.session.query(rules_db.rule_code).filter_by(rule_code=alert['rule_id']).scalar() is not None):
-                    # print("Modsec dubbel")
-                    rule = rules_db.query.filter_by(rule_code=alert['rule_id']).first()
-                    rule.count += 1
-                    db.session.commit()
+                if (db3.session.query(rules_db.rule_code).filter_by(rule_code=alert['rule_id']).scalar() is not None):
+                    sql = """UPDATE rules_db SET count = count + 1 WHERE rule_code = %s"""
+                    data = alert['rule_id']
+                    db3.engine.execute(sql, data)
+                    # db.session.commit()
                 else:
-                    # print(alert['rule_id'])
-                    new_rule = rules_db(
-                        name=hit['message']['rule_name'],
-                        rule_code=int(hit['message']['ruleId']),
-                        score=1,
-                        count=1
-                    )
-                    db.session.add(new_rule)
-                    database_rules = rules_db.query.order_by(rules_db.count.desc()).all()
-                    print(database_rules)
-                    db.session.commit()
-            except:
+                    # try:
+                        new_rule = rules_db(
+                            name=hit['message']['rule_name'],
+                            rule_code=int(hit['message']['ruleId']),
+                            score=1,
+                            count=1
+                        )
+                        db3.session.add(new_rule)
+                        # db.session.commit()
+                        print(alert['rule_id'])
+                        print('nieuwe rule geadd')
+                        print(hit)
+                    # except:
+                    #     db.session.rollback()
+                    #     print("Dubbele snelle entry gevonden")
+                    #     print(hit)
+                    #     sql = """UPDATE rules_db SET count = count + 1 WHERE rule_code = %s"""
+                    #     data = alert['rule_id']
+                    #     db.engine.execute(sql, data)
+                    #     db.session.commit()
+                    #     print("Na db commit")
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
                 print("Geen rule_id gevonden modsecurity")
                 print(hit)
         except KeyError:
             print("Modsecurity Geen client_ip gevonden / hostip")
             return None
-        alert['document_type'] = "modsecurity"
-        alert['unieke_data'] = unieke_data_sorteren(hit)
+    alert['document_type'] = "modsecurity"
+    # alert['unieke_data'] = "test"
+    alert['unieke_data'] = unieke_data_sorteren(hit)
+
     ip_to_add = alert['source_ip']
     if not ip_to_add in verwerkt_ip:
-      verwerkt_ip[ip_to_add] = [1, alert['source_country']]
+        verwerkt_ip[ip_to_add] = [1, alert['source_country']]
     else:
-      verwerkt_ip[ip_to_add][0] += 1
+        verwerkt_ip[ip_to_add][0] += 1
     country_to_add = alert['source_country']
     r = str(random.randint(0, 255))
     g = str(random.randint(0, 255))
@@ -533,6 +592,7 @@ def process_data_duckhunt(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
+
     new_alert = alerts_db(
         applicatie=alert['application'],
         id=alert['id'],
@@ -543,9 +603,11 @@ def process_data_duckhunt(hit):
         document_type=alert['document_type'],
         unieke_data=str(alert['unieke_data'])
     )
-    db.session.add(new_alert)
-    db.session.commit()
+    db3.session.add(new_alert)
+    db3.session.commit()
+    db3.session.close()
     return alert
+
 
 def process_data_logprocessor(hit):
     alert = {}
@@ -555,17 +617,24 @@ def process_data_logprocessor(hit):
     alert['source_ip'] = hit['source']
     alert['destination_ip'] = hit['destination']
     match = geolite2.lookup(hit['source'])
-
     if match is not None:
         try:
-            alert['source_country'] = pycountry.countries.get(
-                alpha_2=match.country).common_name
+            if (match.country == 'RU'):
+                alert['source_country'] = 'Russia'
+            elif (match.country == 'KR'):
+                alert['source_country'] = "Korea, Republic of"
+            else:
+                try:
+                    alert['source_country'] = pycountry.countries.get(
+                        alpha_2=match.country).common_name
+                except:
+                    alert['source_country'] = pycountry.countries.get(
+                        alpha_2=match.country).name
         except:
-            alert['source_country'] = pycountry.countries.get(
-                alpha_2=match.country).name
-        # print(alert['source_country'])
+            pass
     else:
         alert['source_country'] = 'None'
+        print(hit)
         print("Kon geen land achterhalen")
     # alert['source_country'] = "Netherlands"
     alert['document_type'] = "logprocessor"
@@ -585,6 +654,20 @@ def process_data_logprocessor(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
+
+    new_alert = alerts_db(
+        applicatie=alert['application'],
+        id=alert['id'],
+        timestamp=alert['timestamp'],
+        source_ip=alert['source_ip'],
+        destination_ip=alert['destination_ip'],
+        source_country=alert['source_country'],
+        document_type=alert['document_type'],
+        unieke_data=str(alert['unieke_data'])
+    )
+    db5.session.add(new_alert)
+    db5.session.commit()
+    db5.session.close()
     return alert
 
 def convert_timezone_logprocessor(time):
@@ -626,11 +709,23 @@ def index():
 
 @app.route('/home', methods=["GET", "POST"])
 def home():
-    return render_template('home.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, lengte=lengte_duckhunt)
+    return render_template('home.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, lengte=lengte_duckhunt, error_rekenwerk=gecombineerd)
 
 @app.route('/visualisation', methods=["GET", "POST"])
 def visualisation():
     return render_template('visualisation.html', alert_list=verwerkt_duckhunt, title='home', tijd1=tijd1, lengte=lengte_duckhunt)
+
+@app.route('/log', methods=["GET", "POST"])
+def log():
+    return render_template('log.html', host_grade_log=host_grade_log)
+
+@app.route('/alert', methods=["GET", "POST"])
+def alert():
+    return render_template('alert.html', host_grade_alert=host_grade_alert)
+
+@app.route('/ban', methods=["GET", "POST"])
+def ban():
+    return render_template('ban.html', host_grade_ban=host_grade_ban)
 
 @app.route('/combined', methods=["GET", "POST"])
 def combined():
@@ -655,54 +750,72 @@ def combined():
 
 @app.route('/settings', methods=["GET", "POST"])
 def settings():
-    if request.method == "POST":
-        for land in database_landen:
-            form = request.form[land.name]
-            if(form == ''):
-                land.score = land.score
-            else:
-                land.score = int(form)
-            sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
-            data = (land.score, land.name)
-            db.engine.execute(sql, data)
-        for frequentie in database_frequenties:
-            form = request.form[frequentie.name]
-            form_value1 = str(request.form["a" + str(frequentie.value1)])
-            form_value2 = str(request.form["a" + str(frequentie.value2)])
-            if(form == ''):
-                frequentie.score = frequentie.score
-            else:
-                frequentie.score = int(form)
-            if(form_value1 == ''):
-                frequentie.value1 = frequentie.value1
-            else:
-                frequentie.value1 = int(form_value1)
-            if(form_value2 == ''):
-                frequentie.value2 = frequentie.value2
-            else:
-                frequentie.value2 = int(form_value2)
-            sql = """UPDATE frequenties_db SET score = %s, value1 = %s, value2 = %s WHERE name = %s"""
-            data = (frequentie.score, frequentie.value1, frequentie.value2, frequentie.name)
-            db.engine.execute(sql, data)
-        for rule in database_rules:
-            form = request.form["a" + str(rule.rule_code)]
-            if(form == ''):
-                rule.score = rule.score
-            else:
-                rule.score = int(form)
-            sql = """UPDATE rules_db SET score = %s WHERE rule_code = %s"""
-            data = (rule.score, rule.rule_code)
-            db.engine.execute(sql, data)
-        for applicatie in database_applicaties:
-            form = request.form[applicatie.name]
-            if(form == ''):
-                applicatie.score = applicatie.score
-            else:
-                applicatie.score = int(form)
-            sql = """UPDATE applicaties_db SET score = %s WHERE name = %s"""
-            data = (applicatie.score, applicatie.name)
-            db.engine.execute(sql, data)
-        db.session.commit()
+    try:
+        database_rules = rules_db.query.order_by(rules_db.count.desc()).all()
+        if request.method == "POST":
+            for land in database_landen:
+                form = request.form[land.name]
+                if (form == ''):
+                    land.score = land.score
+                else:
+                    land.score = int(form)
+                sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
+                data = (land.score, land.name)
+                db4.engine.execute(sql, data)
+            for frequentie in database_frequenties:
+                form = request.form[frequentie.name]
+                form_value1 = str(request.form["a" + str(frequentie.value1)])
+                form_value2 = str(request.form["a" + str(frequentie.value2)])
+                if (form == ''):
+                    frequentie.score = frequentie.score
+                else:
+                    frequentie.score = int(form)
+                if (form_value1 == ''):
+                    frequentie.value1 = frequentie.value1
+                else:
+                    frequentie.value1 = int(form_value1)
+                if (form_value2 == ''):
+                    frequentie.value2 = frequentie.value2
+                else:
+                    frequentie.value2 = int(form_value2)
+                sql = """UPDATE frequenties_db SET score = %s, value1 = %s, value2 = %s WHERE name = %s"""
+                data = (frequentie.score, frequentie.value1, frequentie.value2, frequentie.name)
+                db4.engine.execute(sql, data)
+            for rule in database_rules:
+                form = request.form["a" + str(rule.rule_code)]
+                if (form == ''):
+                    rule.score = rule.score
+                else:
+                    rule.score = int(form)
+                sql = """UPDATE rules_db SET score = %s WHERE rule_code = %s"""
+                data = (rule.score, rule.rule_code)
+                db4.engine.execute(sql, data)
+            for applicatie in database_applicaties:
+                form = request.form[applicatie.name]
+                if (form == ''):
+                    applicatie.score = applicatie.score
+                else:
+                    applicatie.score = int(form)
+                sql = """UPDATE applicaties_db SET score = %s WHERE name = %s"""
+                data = (applicatie.score, applicatie.name)
+                db4.engine.execute(sql, data)
+
+            for actie in database_acties:
+                form_value1 = request.form[actie.name]
+                form_value2 = str(request.form["a" + str(actie.name)])
+                if(form_value1== ''):
+                    actie.score1 = actie.score1
+                else:
+                    actie.score1 = int(form_value1)
+                if(form_value2 == ''):
+                    actie.score2 = actie.score2
+                else:
+                    actie.score2 = int(form_value2)
+                    sql = """UPDATE acties_db SET score1 = %s, score2 = %s WHERE name = %s"""
+                    data = (actie.score1, actie.score2, actie.name)
+                    db4.engine.execute(sql, data)
+            db4.session.commit()
+            db4.session.close()
         # print(form)
         # for k,v in form.items():
         #     for land in database_landen:
@@ -714,7 +827,11 @@ def settings():
         #     # db.session.execute(sql, data)
         #     db.session.commit()
             # print(db.engine)
-    return render_template('settings.html', title='settings', database_landen=database_landen, database_frequenties=database_frequenties, database_rules=database_rules, database_applicaties=database_applicaties)
+        return render_template('settings.html', title='settings', database_landen=database_landen, database_frequenties=database_frequenties, database_rules=database_rules, database_applicaties=database_applicaties, database_acties=database_acties)
+    except:
+        return render_template('settings.html', title='settings', database_landen=database_landen,
+                               database_frequenties=database_frequenties, database_rules=database_rules,
+                               database_applicaties=database_applicaties, database_acties=database_acties)
 
 @app.route('/about', methods=["GET", "POST"])
 def about():
@@ -727,9 +844,9 @@ def about():
                     land.score = v
             sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
             data = (v, k)
-            db.engine.execute(sql, data)
+            db3.engine.execute(sql, data)
             # db.session.execute(sql, data)
-            db.session.commit()
+            db3.session.commit()
             # print(db.engine)
     return(request.form)
     # return render_template('settings.html', title='about')
@@ -760,8 +877,8 @@ def visualise():
     legend = 'Most attacking ips'
     # labels = ["January", "February", "March", "April", "May", "June", "July", "August"]
     # values = [10, 9, 8, 7, 6, 4, 7, 8]
-    return render_template('visualise.html', sorted_histogram = sorted_histogram,values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen, histogram=histogram, lengte_unique_ips = lengte_unique_ips,lengte=lengte_combined, sorted_d = sorted_d, host_grade=host_grade)
+    return render_template('visualise.html', sorted_histogram = sorted_histogram,values=data_visualise, labels=labels_visualise, legend=legend, verwerkt_ip=verwerkt_ip, verwerkt_landen=verwerkt_landen, histogram=histogram, lengte_unique_ips = lengte_unique_ips,lengte=lengte_combined, sorted_d_verwerkt_ip = sorted_d_verwerkt_ip, host_grade=host_grade, sorted_d_verwerkt_land=sorted_d_verwerkt_land)
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=5000, threaded=True)
+    app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)

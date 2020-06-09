@@ -1,10 +1,29 @@
 {% extends "layout.html" %}
 {% block content %}
-{{lengte.lengte}} <br>
 
- {% for alert in alert_list %}
-        {{ alert.timestamp }} <br>
-    {% endfor %}
+<style>
+table, th, td {
+  border: 1px solid black;
+}
+</style>
+
+<table>
+    <tr>
+        <th>Applicatie</th>
+    </tr>
+        {% for i in error_rekenwerk %}
+       <tr>
+        <td>
+            {{ i.application }}
+            <td>
+           {{ i.timestamp }}</td>
+           <td>{{ i.id }}</td>
+        </td>
+
+    </tr>
+        {% endfor %}
+</table>
+
 
 {% endblock content %}
 
