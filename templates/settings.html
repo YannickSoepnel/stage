@@ -83,11 +83,12 @@
                         <tr>
                          {% for frequentie in database_frequenties %}
                         <tr>
-                            <td>Tussen:</td>
+                            {% if frequentie.name == "Eerste frequentie" %}
+                            <td>Tot en met:</td>
                             <td>
-                                <input style="width: 50px;"name="a{{frequentie.value1}}" placeholder="{{frequentie.value1}}">
+                                <input style="width: 50px;"name="a{{frequentie.name}}" placeholder="{{frequentie.value1}}">
                                 en
-                                <input style="width: 50px;" name="a{{frequentie.value2}}" placeholder="{{frequentie.value2}}">
+                                <input style="width: 50px;" name="b{{frequentie.name}}" placeholder="{{frequentie.value2}}">
                             </td>
                         </tr>
                             <td>Score:</td>
@@ -95,6 +96,31 @@
                                 <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
                             </td>
                          </tr>
+                            {% elif frequentie.name == "Tweede frequentie" %}
+                            <td>Tot en met:</td>
+                            <td>
+                                <input style="width: 50px;"name="a{{frequentie.name}}" placeholder="{{frequentie.value1}}">
+                                en
+                                <input style="width: 50px;" name="b{{frequentie.name}}" placeholder="{{frequentie.value2}}">
+                            </td>
+                        </tr>
+                            <td>Score:</td>
+                            <td>
+                                <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
+                            </td>
+                         </tr>
+                            {% else %}
+                            <td>Vanaf:</td>
+                            <td>
+                                <input style="width: 50px;"name="a{{frequentie.name}}" placeholder="{{frequentie.value1}}">
+                            </td>
+                        </tr>
+                            <td>Score:</td>
+                            <td>
+                                <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
+                            </td>
+                         </tr>
+                            {% endif %}
                          {% endfor %}
                      </table>
                     </div>
@@ -109,12 +135,26 @@
                              </tr>
                              {% for actie in database_acties %}
                              <tr>
-                                    <td>{{actie.name}} als score tussen:</td>
+                                    {% if actie.name == "log" %}
+                                    <td>{{actie.name}} als score tot en met:</td>
                                     <td>
                                         <input name="{{actie.name}}" placeholder="{{actie.score1}}" style="width: 50px;">
                                         en
                                         <input name="a{{actie.name}}" placeholder="{{actie.score2}}" style="width: 50px;">
                                     </td>
+                                    {% elif actie.name == "alert" %}
+                                 <td>{{actie.name}} als score tot en met:</td>
+                                    <td>
+                                        <input name="{{actie.name}}" placeholder="{{actie.score1}}" style="width: 50px;">
+                                        en
+                                        <input name="a{{actie.name}}" placeholder="{{actie.score2}}" style="width: 50px;">
+                                    </td>
+                                    {% else %}
+                                 <td>{{actie.name}} vanaf score:</td>
+                                    <td>
+                                        <input name="{{actie.name}}" placeholder="{{actie.score1}}" style="width: 50px;">
+                                    </td>
+                                 {% endif %}
                              </tr>
                              {% endfor %}
                          </table>

@@ -53,7 +53,7 @@
         // define the chart data
 
         var chartData2 = {
-          labels : [{% for item in sorted_d_verwerkt_land[:10] %}
+          labels : [{% for item in sorted_d_verwerkt_land[:15] %}
                        "{{item[0]}}",
                      {% endfor %}],
           datasets : [{
@@ -63,7 +63,7 @@
               backgroundColor: [{% for item in sorted_d_verwerkt_land %}
                                    "{{item[1][1]}}",
                                    {% endfor %}],
-              data : [{% for item in sorted_d_verwerkt_land[:10] %}
+              data : [{% for item in sorted_d_verwerkt_land[:15] %}
                            {{item[1][0]}},
                       {% endfor %}],
               spanGaps: false
@@ -123,26 +123,6 @@
     document.getElementById('js-legend').innerHTML = myChart2.generateLegend();
     </script>
 
-<table>
-                <tr>
-                    <th>IP</th>
-                    <th>Land score</th>
-                    <th>Frequentie score</th>
-                    <th>Applicatie score</th>
-                    <th>Rule score</th>
-                    <th>Totaal</th>
-                </tr>
-           {% for key in host_grade %}
-                <tr>
-                  <td>{{ key }}</td>
-                  <td>{{ host_grade[key][0][0] }}</td>
-                  <td>{{ host_grade[key][0][1] }}</td>
-                  <td>{{ host_grade[key][0][2] }}</td>
-                  <td>{{ host_grade[key][0][3] }}</td>
-                  <td>{{ host_grade[key][0][0] + host_grade[key][0][1] + host_grade[key][0][2] + host_grade[key][0][3] }}</td>
-                 </tr>
-            {% endfor %}
-</table>
 
 {% endblock %}
 

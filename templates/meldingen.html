@@ -79,20 +79,18 @@ function SearchSourceIp() {
                     <th>Status</th>
                     <th>Score</th>
                 </tr>
-           {% for key in host_grade_ban%}
-                    <tr>
+           {% for key in host_grade_alert%}
+                   <tr>
                         <td>{{key[1][1][2]}}</td>
                         <td>{{key[0]}}</td>
                         <td>{{key[1][1][0]}}</td>
                         <td>{{key[1][1][1]}}</td>
-                        <td>Ban</td>
+                        <td>Alert</td>
                         <td>{{key[1][0][0] + key[1][0][1] + key[1][0][2] + key[1][0][3] }}</td>
                     </tr>
             {% endfor %}
     </table>
     </div>
-
-
 {% endblock content %}
 
 
