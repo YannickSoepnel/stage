@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+
+</style>
+
+<form action="", class="form-inline" method="post">
+    <div class="settings">
+        <table style="float: top;">
+            <td></td>
+            <td></td>
+                <td></td>
+            <td style="text-align: right"><button type="submit" class="btn btn-secondary">Submit</button></td>
+            <tr>
+                <td style="height:10px"></td>
+            </tr>
+                <td style="width:30px"></td>
+                <td>
+                <div class="settings-landen" style="width: 300px; height: 800px; overflow-y: auto;">
+                 <table class="table table-striped">
+                     <tr style="text-align: left">
+                            <th>Landen</th>
+                            <th>Score</th>
+                     </tr>
+                     {% for land in database_landen %}
+                     <tr>
+                            <td>{{ land.name }}</td>
+                            <td>
+                                <input name="{{land.name}}" placeholder="{{land.score}}" style="width: 50px;">
+                            </td>
+                     </tr>
+                     {% endfor %}
+                 </table>
+                </div>
+                </td>
+                    <td style="width:10px"></td>
+                <td>
+                    <div class="settings-rules" style="width: 500px; height: 800px; overflow-y: auto;">
+                        <table class="table table-striped">
+                             <tr style="text-align: left">
+                                    <th>Regels</th>
+                                    <th>Prefix</th>
+                                    <th>Score</th>
+                                    <th>Hoeveel keer voorgekomen</th>
+                             </tr>
+                             {% for rule in database_rules %}
+                             <tr>
+                                    <td>{{ rule.name }}</td>
+                                    <td>{{ rule.rule_code }}</td>
+                                    <td>
+                                        <input name="a{{rule.rule_code}}" placeholder="{{rule.score}}" style="width: 50px;">
+                                    </td>
+                                    <td>{{rule.count}}</td>
+                             </tr>
+                             {% endfor %}
+                         </table>
+                    </div>
+                </td>
+                    <td style="width:10px"></td>
+                <td>
+                    <div class="settings-applicatie" style="width: 300px; height: 290px; overflow-y: auto;">
+                        <table class="table table-striped">
+                             <tr style="text-align: left">
+                                    <th>Applicatie</th>
+                                    <th>Score</th>
+                             </tr>
+                             {% for applicatie in database_applicaties %}
+                             <tr>
+                                    <td>{{ applicatie.name }}</td>
+                                    <td>
+                                        <input name="{{applicatie.name}}" placeholder="{{applicatie.score}}" style="width: 50px;">
+                                    </td>
+                             </tr>
+                             {% endfor %}
+                         </table>
+                    </div>
+                    <div class="settings-frequentie" style="width: 300px; height: 510px; overflow-y: auto;">
+                        <table class="table table-striped">
+                         <tr style="text-align: left">
+                                <th>Aantal keer dat IP voorkomt</th>
+                                <th>Waardes</th>
+                         </tr>
+                        <tr>
+                         {% for frequentie in database_frequenties %}
+                        <tr>
+                            {% if frequentie.name == "Eerste frequentie" %}
+                            <td>Tot en met:</td>
+                            <td>
+                                <input style="width: 50px;"name="a{{frequentie.name}}" placeholder="{{frequentie.value1}}">
+                                en
+                                <input style="width: 50px;" name="b{{frequentie.name}}" placeholder="{{frequentie.value2}}">
+                            </td>
+                        </tr>
+                            <td>Score:</td>
+                            <td>
+                                <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
+                            </td>
+                         </tr>
+                            {% elif frequentie.name == "Tweede frequentie" %}
+                            <td>Tot en met:</td>
+                            <td>
+                                <input style="width: 50px;"name="a{{frequentie.name}}" placeholder="{{frequentie.value1}}">
+                                en
+                                <input style="width: 50px;" name="b{{frequentie.name}}" placeholder="{{frequentie.value2}}">
+                            </td>
+                        </tr>
+                            <td>Score:</td>
+                            <td>
+                                <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
+                            </td>
+                         </tr>
+                            {% else %}
+                            <td>Vanaf:</td>
+                            <td>
+                                <input style="width: 50px;"name="a{{frequentie.name}}" placeholder="{{frequentie.value1}}">
+                            </td>
+                        </tr>
+                            <td>Score:</td>
+                            <td>
+                                <input style="width: 50px;"name="{{frequentie.name}}" placeholder="{{frequentie.score}}">
+                            </td>
+                         </tr>
+                            {% endif %}
+                         {% endfor %}
+                     </table>
+                    </div>
+                </td>
+                                <td style="width:10px"></td>
+                <td>
+                <div class="settings-grading" style="width: 300px; height: 800px; overflow-y: auto; position: static;">
+                        <table class="table table-striped">
+                             <tr style="text-align: left">
+                                    <th>Actie</th>
+                                    <th>Score</th>
+                             </tr>
+                             {% for actie in database_acties %}
+                             <tr>
+                                    {% if actie.name == "log" %}
+                                    <td>{{actie.name}} als score tot en met:</td>
+                                    <td>
+                                        <input name="{{actie.name}}" placeholder="{{actie.score1}}" style="width: 50px;">
+                                        en
+                                        <input name="a{{actie.name}}" placeholder="{{actie.score2}}" style="width: 50px;">
+                                    </td>
+                                    {% elif actie.name == "alert" %}
+                                 <td>{{actie.name}} als score tot en met:</td>
+                                    <td>
+                                        <input name="{{actie.name}}" placeholder="{{actie.score1}}" style="width: 50px;">
+                                        en
+                                        <input name="a{{actie.name}}" placeholder="{{actie.score2}}" style="width: 50px;">
+                                    </td>
+                                    {% else %}
+                                 <td>{{actie.name}} vanaf score:</td>
+                                    <td>
+                                        <input name="{{actie.name}}" placeholder="{{actie.score1}}" style="width: 50px;">
+                                    </td>
+                                 {% endif %}
+                             </tr>
+                             {% endfor %}
+                         </table>
+                    </div>
+                </td>
+        </table>
+    </div>
+</form>
+{% endblock content %}
+
+
+

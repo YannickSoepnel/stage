@@ -1,4 +1,128 @@
 {% extends "layout.html" %}
-{% block content %}
-    <h1>Visualise</h1>
+
+{% block visualise %}
+
+<!-- bar chart canvas element -->
+<div class="achter">
+<div class="visualise-top">
+    <br>
+</div>
+    <div class="visualise-left-border"><br></div>
+<div class="visualise-left">
+    <div class="canvas-container">
+        <center><b>Top 15 aanvallers</b></center>
+        <div class="tabel">
+            <br>
+            <table style="width:100%">
+                <tr>
+                    <th>IP-adres</th>
+                    <th>Frequentie</th>
+                    <th>Land</th>
+                </tr>
+           {% for key in sorted_d_verwerkt_ip[:15] %}
+                <tr>
+                  <td>{{ key[0] }}</td>
+                  <td>{{ key[1][0] }}</td>
+                  <td>{{ key[1][1] }}</td>
+                 </tr>
+            {% endfor %}
+                </table>
+        </div>
+    </div>
+    <div class="canvas-histogram">
+        <center><b>Histogram van alerts</b></center>
+    <canvas id="myChart3" width="500" height="500"></canvas>
+    </div>
+</div>
+
+<div class="visualise-right">
+    <div class="canvas-landen">
+        <center><b>Piechart aanval landen</b></center>
+    <canvas id="myChart2" width="500" height="724"></canvas>
+    <div id="js-legend" class="chart-legend">
+    </div>
+    </div>
+
+</div>
+</div>
+    <script>
+        // Global parameters:
+        // do not resize the chart canvas when its container does (keep at 600x400px)
+        Chart.defaults.global.responsive = false;
+
+        // define the chart data
+
+        var chartData2 = {
+          labels : [{% for item in sorted_d_verwerkt_land[:15] %}
+                       "{{item[0]}}",
+                     {% endfor %}],
+          datasets : [{
+              label: '{{ legend }}',
+              fill: true,
+              lineTension: 0.1,
+              backgroundColor: [{% for item in sorted_d_verwerkt_land %}
+                                   "{{item[1][1]}}",
+                                   {% endfor %}],
+              data : [{% for item in sorted_d_verwerkt_land[:15] %}
+                           {{item[1][0]}},
+                      {% endfor %}],
+              spanGaps: false
+          }]
+        }
+
+        var chartData3 = {
+          labels : [{% for key in sorted_histogram[-24:] %}
+                       "{{key[0]}}",
+                     {% endfor %}],
+          datasets : [{
+              label: 'Histogram Alerts',
+              fill: true,
+              lineTension: 0.1,
+              backgroundColor: "rgba(75,0,192,0.4)",
+              data : [{% for key in sorted_histogram[-24:] %}
+                           {{key[1]}},
+                      {% endfor %}],
+              spanGaps: false
+          }]
+        }
+
+
+        // get chart canvas
+        var ctx2 = document.getElementById("myChart2").getContext("2d");
+        var ctx3 = document.getElementById("myChart3").getContext("2d");
+
+
+        var myChart2 = new Chart(ctx2, {
+          type: 'pie',
+          data: chartData2,
+          options:{
+              responsive: false,
+              legend: {
+                 display: false,
+                 position: 'right',
+                 onClick: null,
+                 maxWidth: 100,
+              },
+             }
+        });
+        var myChart3 = new Chart(ctx3, {
+          type: 'line',
+          data: chartData3,
+          options: {
+            maintainAspectRatio: false,
+            scales: {
+              xAxes: [{
+                ticks: {
+                  padding: 10
+                }
+              }]
+            }
+          }
+        });
+
+    document.getElementById('js-legend').innerHTML = myChart2.generateLegend();
+    </script>
+
+
 {% endblock %}
+

@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+
+
+{% block dropdownbutton %}
+
+<script>
+
+function SearchApplication() {
+  var input, filter, table, tr, td, x;
+  input = document.getElementById("UserInputApplication");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("AlertTable");
+  tr = table.getElementsByTagName("tr");
+
+  for (x = 0; x < tr.length; x++) {
+    td = tr[x].getElementsByTagName("td")[0];
+    if (td) {
+      if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+        tr[x].style.display = "";
+      }
+      else {
+        tr[x].style.display = "none";
+      }
+    }
+  }
+}
+
+function SearchSourceIp() {
+  var input, filter, table, tr, td, x;
+  input = document.getElementById("UserInputSourceIp");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("AlertTable");
+  tr = table.getElementsByTagName("tr");
+
+  for (x = 0; x < tr.length; x++) {
+    td = tr[x].getElementsByTagName("td")[3];
+    if (td) {
+      if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {
+        tr[x].style.display = "";
+      }
+      else {
+        tr[x].style.display = "none";
+      }
+    }
+  }
+}
+
+
+
+</script>
+<form action="", class="form-inline" method="post">
+              <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Selecteer tijd
+              <span class="caret"></span></button>
+              <ul class="dropdown-menu">
+                <li><input class="btn btn-default" type="submit" name="tijd" value="15 minuten"></li>
+                <li><input class="btn btn-default" type="submit" name="tijd" value="30 minuten"></li>
+                <li><input class="btn btn-default" type="submit" name="tijd" value="1 uur"></li>
+              </ul>
+</form>
+
+
+{% endblock dropdownbutton %}
+{% block content %}
+<div class="accordion" id="accordionExample">
+    <table style="width:100px;" class="table table-striped", id="AlertTable">
+                <tr style="text-align: left">
+                    <th>Applicatie
+                    <div class="form-group">
+                        <input type="text" id="UserInputApplication" onkeyup="SearchApplication()" class="form-control input-lg" autocomplete="off" name="input" placeholder="Zoek op id"  autofocus>
+                    </div>
+                    </th>
+                    <th>Source ip
+                    <div class="form-group">
+                        <input type="text" id="UserInputSourceIp" onkeyup="SearchSourceIp()" class="form-control input-lg" autocomplete="off" name="input" placeholder="Zoek op id"  autofocus>
+                    </div>
+                    </th>
+                    <th>Timestamp</th>
+                    <th>Source country</th>
+                    <th>Status</th>
+                    <th>Score</th>
+                </tr>
+           {% for key in host_grade_log%}
+                    <tr>
+                        <td>{{key[1][1][2]}}</td>
+                        <td>{{key[0]}}</td>
+                        <td>{{key[1][1][0]}}</td>
+                        <td>{{key[1][1][1]}}</td>
+                        <td>Log</td>
+                        <td>{{key[1][0][0] + key[1][0][1] + key[1][0][2] + key[1][0][3] }}</td>
+                    </tr>
+            {% endfor %}
+    </table>
+    </div>
+
+
+{% endblock content %}
+
+
