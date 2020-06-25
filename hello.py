@@ -1,7 +1,6 @@
 from flask import Flask, render_template, url_for, request, redirect
 import _thread
 import urllib3
-import time
 import requests
 import json
 import time
@@ -33,15 +32,11 @@ db5 = SQLAlchemy(app)
 db6 = SQLAlchemy(app)
 db7 = SQLAlchemy(app)
 
-engine = create_engine("mysql+pymysql://root:ihvhbs93@localhost/stageproject", pool_pre_ping=True)
-
 server = smtplib.SMTP('smtp.office365.com', 587)
 server.starttls()
 server.login('yannick.soepnel@true.nl', 'Rome:Fell:0!')
 
-Session = scoped_session(sessionmaker(engine, autoflush=True, expire_on_commit = False))
-
-SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:ihvhbs93@localhost/stageproject?charset=utf8mb4"
+SQLALCHEMY_DATABASE_URI = "mysql+pymysql://sauron:S@ur0n01@localhost/sauron?charset=utf8mb4"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -178,7 +173,6 @@ def get_duckhunt_data(): ## ophalen duckhunt data
                 try:
                     if not hit in duplicate_duckhunt:
                         verwerking = process_data_duckhunt(hit)
-                        print(hit)
                         if verwerking != None:
                             verwerkt_duckhunt.append(verwerking)
                             gecombineerd.append(verwerking)
@@ -401,7 +395,7 @@ def process_data_honeypot(hit): #verwerken van honeypot data
     db2.session.close()
     return alert
 
-def process_data_duckhunt(hit):
+def process_data_duckhunt(hit): ## Verwerken van duckhunt alerts
     global database_rules, duplicate_process_duckhunt, database_alerts
     alert = {}
     alert['application'] = "duckhunt"
@@ -529,7 +523,6 @@ def process_data_duckhunt(hit):
         verwerkt_landen[country_to_add] = [1, color]
     else:
         verwerkt_landen[country_to_add][0] += 1
-
     new_alert = alerts_db(
         applicatie=alert['application'],
         id=alert['id'],
@@ -545,7 +538,7 @@ def process_data_duckhunt(hit):
     db3.session.close()
     return alert
 
-def process_data_logprocessor(hit):
+def process_data_logprocessor(hit): #verwerken logprocessor alerts
     alert = {}
     alert['application'] = "logprocessor"
     alert['id'] = hit['event_id']
@@ -607,7 +600,7 @@ def process_data_logprocessor(hit):
     db5.session.close()
     return alert
 
-def process_data_palo(hit):
+def process_data_palo(hit): #Verwerken palo alto alerts
     global database_alerts
     alert = {}
     alert['application'] = "palo alto"
@@ -648,15 +641,7 @@ def process_data_palo(hit):
     db6.session.close()
     return alert
 
-def convert_timezone_logprocessor(time):
-    tijd = time
-    convert_time = datetime.datetime.strptime(tijd, '%Y-%m-%dT%H:%M:%SZ')
-    local_timezone = tzlocal.get_localzone() #Haal locale tijdzone op
-    convert = convert_time.replace(tzinfo=pytz.utc).astimezone(local_timezone)
-    converted = convert.replace(tzinfo=None) #Verwijder +02:00 aan date format
-    return converted
-
-def convert_timezone(time):
+def convert_timezone(time): #omzetten van tijd (Alerts komen binnen -2 uur dus hier omzetten)
     tijd = time
     convert_time = datetime.datetime.strptime(tijd, '%Y-%m-%dT%H:%M:%S.%fZ')
     local_timezone = tzlocal.get_localzone() #Haal locale tijdzone op
@@ -664,14 +649,14 @@ def convert_timezone(time):
     converted = convert.replace(tzinfo=None) #Verwijder +02:00 aan date format
     return converted
 
-def send_abuse_email(alert):
+def send_abuse_email(alert): #Het versturen van abuse emails naar provider
     global send_abuse_list
     try:
         ip = alert['source_ip']
         if not ip in send_abuse_list:
-            print(send_abuse_list)
             send_abuse_list.append(ip)
-            country = alert['source_country']
+            print(alert)
+            country = str(alert['source_country'])
             tijd = alert['timestamp']
             timestamp = tijd.strftime("%m/%d/%Y, %H:%M:%S")
             destination = alert['destination_ip']
@@ -679,12 +664,13 @@ def send_abuse_email(alert):
                 'https://stat.ripe.net/data/abuse-contact-finder/data.json?resource=' + ip,
                 headers={'accept': 'application/json'}, allow_redirects=True)
             message_abuse = r.json()
-            # abuse_mail = message_abuse['data']['anti_abuse_contacts']['abuse_c'][0]['email']
-            abuse_mail = 'yannick.soepnel@true.nl'
+            abuse_mail = message_abuse['data']['anti_abuse_contacts']['abuse_c'][0]['email']
+            print(abuse_mail)
             subject = "Abuse alert - TRUE"
+            print('before sending')
             text = 'Dear,\n \n' \
                    '' \
-                   'We at True care for our security. Our security alert has received alerts regarding one specific IP-address. This email is being sent to report abuse. The full alert is as following:\n \n' \
+                   'We at True care for our security. Our security system has received alerts regarding one specific IP-address. This email is being sent to report abuse. The full alert is as following:\n \n' \
                    'IP-address: ' + ip + '\n'+ \
                    'Destination IP: ' + destination + '\n' + \
                    'Country: ' + country + '\n'+\
@@ -692,17 +678,17 @@ def send_abuse_email(alert):
                    '\n \n If you would like to receive more information please contact us at security@true.nl'
             message = 'Subject: {}\n\n{}'.format(subject, text)
             server.sendmail('yannick.soepnel@true.nl', abuse_mail, message)
+            print('after sending')
         else:
             pass
     except:
         pass
 
-def send_alert(alert):
+def send_alert(alert): #Het versturen van alerts in microsoft teams
     global send_alert_list
     myTeamsMessage = pymsteams.connectorcard("https://outlook.office.com/webhook/70680fab-f393-4f6e-bf4a-02d5166ad298@fcea803c-cd1f-45a6-8e44-11b1d7165ccc/IncomingWebhook/46e03e0ef6fe4d738d4e9b5c88474eb8/d373d754-fdb2-4e8a-b96a-01806c6e2e2a")
     ip = alert['source_ip']
     if not ip in send_alert_list:
-        print(send_alert_list)
         send_alert_list.append(ip)
         country = alert['source_country']
         tijd = alert['timestamp']
@@ -720,7 +706,7 @@ def send_alert(alert):
     else:
         pass
 
-# Create two threads as follows
+#aanmaken van threads
 try:
     _thread.start_new_thread( get_honeypot_data, ())
     _thread.start_new_thread( get_duckhunt_data, ())
@@ -878,42 +864,7 @@ def settings():
                                database_frequenties=database_frequenties, database_rules=database_rules,
                                database_applicaties=database_applicaties, database_acties=database_acties)
 
-@app.route('/about', methods=["GET", "POST"])
-def about():
-    if request.method == "POST":
-        form = request.form
-        print(form)
-        for k,v in form.items():
-            for land in database_landen:
-                if (land.name == k):
-                    land.score = v
-            sql = """UPDATE landen_db SET score = %s WHERE name = %s"""
-            data = (v, k)
-            db3.engine.execute(sql, data)
-            # db.session.execute(sql, data)
-            db3.session.commit()
-            # print(db.engine)
-    return(request.form)
-    # return render_template('settings.html', title='about')
-
-@app.route('/honeypot', methods=["GET", "POST"])
-def honeypot():
-    global tijd1
-    if request.method == "POST":
-        nieuwe_tijd = request.form["tijd"]
-        if(nieuwe_tijd == "15 minuten"):
-            tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
-            print("15 minuten")
-            return redirect(request.path,code=302)
-        elif(nieuwe_tijd == "30 minuten"):
-            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=10)
-            print("30 minuten")
-            return redirect(request.path,code=302)
-        elif(nieuwe_tijd == "1 uur"):
-            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=15)
-            return redirect(request.path, code=302)
-    return render_template('honeypot.html', title='honeypot', alert_list=verwerkt_honeypot, tijd1=tijd1, verwerkt_ip=verwerkt_ip, histogram=histogram)
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=5000, threaded=True,use_reloader=False)
+    app.run(host="0.0.0.0", port=5000, threaded=True)
