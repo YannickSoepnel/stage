@@ -95,12 +95,9 @@ database_applicaties = applicaties_db.query.all()
 database_acties = acties_db.query.all()
 
 duplicate_honeypot = []
-verwerkt_honeypot = []
 verwerkt_ip = {}
 verwerkt_landen = {}
 duplicate_duckhunt = []
-verwerkt_duckhunt = []
-verwerkt_logprocessor = []
 duplicate_logprocessor = []
 duplicate_palo_alto = []
 gecombineerd = []                   ## Dit is de lijst met alle verwerkte alerts
@@ -153,7 +150,6 @@ def get_honeypot_data(): ## ophalen honeypot data
                    if not hit in duplicate_honeypot:
                        verwerking = process_data_honeypot(hit)
                        if verwerking != None:
-                           verwerkt_honeypot.append(verwerking)
                            gecombineerd.append(verwerking)
                            ungraded_events.append(verwerking)
                except:
@@ -174,7 +170,6 @@ def get_duckhunt_data(): ## ophalen duckhunt data
                     if not hit in duplicate_duckhunt:
                         verwerking = process_data_duckhunt(hit)
                         if verwerking != None:
-                            verwerkt_duckhunt.append(verwerking)
                             gecombineerd.append(verwerking)
                             ungraded_events.append(verwerking)
                     duplicate_duckhunt.append(hit)
@@ -216,7 +211,6 @@ def get_logprocessor_data(): ## ophalen logprocessor data
                     if not hit in duplicate_logprocessor:
                         verwerking = process_data_logprocessor(hit)
                         if verwerking != None:
-                            verwerkt_logprocessor.append(verwerking)
                             gecombineerd.append(verwerking)
                             ungraded_events.append(verwerking)
                     duplicate_logprocessor.append(hit)
