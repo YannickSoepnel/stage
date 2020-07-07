@@ -36,7 +36,7 @@ server = smtplib.SMTP('smtp.office365.com', 587)
 server.starttls()
 server.login('yannick.soepnel@true.nl', 'Rome:Fell:0!')
 
-SQLALCHEMY_DATABASE_URI = "mysql+pymysql://sauron:S@ur0n01@localhost/sauron?charset=utf8mb4"
+SQLALCHEMY_DATABASE_URI = "mysql+pymysql://sauron-sql:S@ur0n01@localhost/sauron?charset=utf8mb4"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -125,98 +125,110 @@ time_seconden_ophogen = 0
 tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
 def get_honeypot_data(): ## ophalen honeypot data
-    es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"), ignore_warnings=True)
-    time_last_request = datetime.datetime.utcnow()
-    while True:
-       tmp = str(time_last_request).split(" ")
-       ES_query = {"query": {
-           "bool": {
-               "must": {
-                   "range": {
-                       "@timestamp": {
-                           "gte": tmp[0] + "T" + tmp[1]
+    try:
+        es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"), ignore_warnings=True)
+        time_last_request = datetime.datetime.utcnow()
+        while True:
+           tmp = str(time_last_request).split(" ")
+           ES_query = {"query": {
+               "bool": {
+                   "must": {
+                       "range": {
+                           "@timestamp": {
+                               "gte": tmp[0] + "T" + tmp[1]
+                           }
                        }
                    }
                }
            }
-       }
-       }
-       res = es.search(index="logstash-*", size=100, body=ES_query)
-       hits = res['hits']
-       if len(hits['hits']) != 0:
-           time_last_request = datetime.datetime.utcnow()
-           for hit in hits['hits']:
-               try:
-                   if not hit in duplicate_honeypot:
-                       verwerking = process_data_honeypot(hit)
-                       if verwerking != None:
-                           gecombineerd.append(verwerking)
-                           ungraded_events.append(verwerking)
-               except:
-                   pass
-               duplicate_honeypot.append(hit)
-       time.sleep(1)
+           }
+           res = es.search(index="logstash-*", size=100, body=ES_query)
+           hits = res['hits']
+           if len(hits['hits']) != 0:
+               time_last_request = datetime.datetime.utcnow()
+               for hit in hits['hits']:
+                   try:
+                       if not hit in duplicate_honeypot:
+                           verwerking = process_data_honeypot(hit)
+                           if verwerking != None:
+                               gecombineerd.append(verwerking)
+                               ungraded_events.append(verwerking)
+                   except:
+                       pass
+                   duplicate_honeypot.append(hit)
+           time.sleep(1)
+    except:
+        pass
 
 def get_duckhunt_data(): ## ophalen duckhunt data
-    while True:
-        r = requests.get(
-            'https://webinsight.true.nl:443/api/search/universal/relative?query=trueserver_document_type%3Aduckhunt%5C-modsecurity%20OR%20trueserver_document_type%3Aduckhunt%5C-suricata&range=1&fields=*&decorate=true',
-            headers={'accept': 'application/json'}, allow_redirects=True,
-            auth=('admin', '1hil6ep6Y3jI2tfCXIKcKsTlUjnZpTj8'))
-        message = r.json()['messages']
-        if (len(message) != 0):
-            for hit in message:
-                try:
-                    if not hit in duplicate_duckhunt:
-                        verwerking = process_data_duckhunt(hit)
-                        if verwerking != None:
-                            gecombineerd.append(verwerking)
-                            ungraded_events.append(verwerking)
-                    duplicate_duckhunt.append(hit)
-                except:
-                    pass
-        time.sleep(1)
+    try:
+        while True:
+            r = requests.get(
+                'https://webinsight.true.nl:443/api/search/universal/relative?query=trueserver_document_type%3Aduckhunt%5C-modsecurity%20OR%20trueserver_document_type%3Aduckhunt%5C-suricata&range=1&fields=*&decorate=true',
+                headers={'accept': 'application/json'}, allow_redirects=True,
+                auth=('admin', '1hil6ep6Y3jI2tfCXIKcKsTlUjnZpTj8'))
+            message = r.json()['messages']
+            if (len(message) != 0):
+                for hit in message:
+                    try:
+                        if not hit in duplicate_duckhunt:
+                            verwerking = process_data_duckhunt(hit)
+                            if verwerking != None:
+                                gecombineerd.append(verwerking)
+                                ungraded_events.append(verwerking)
+                        duplicate_duckhunt.append(hit)
+                    except:
+                        pass
+            time.sleep(1)
+    except:
+        pass
 
 def get_palo_data(): ## ophalen palo alto data
-    while True:
-        r = requests.get(
-            'https://logs.true.nl:443/api/search/universal/relative?query=pa5050&range=10&decorate=true',
-            headers={'accept': 'application/json'}, allow_redirects=True,
-            auth=('yannick.soepnel@true.nl', 'Rome:Fell:0!'))
-        message = r.json()['messages']
-        if (len(message) != 0):
-            for hit in message:
-                try:
-                    if not hit in duplicate_palo_alto:
-                        verwerking = process_data_palo(hit)
-                        if verwerking != None:
-                            gecombineerd.append(verwerking)
-                            ungraded_events.append(verwerking)
-                    duplicate_palo_alto.append(hit)
-                except:
-                    pass
-        time.sleep(1)
+    try:
+        while True:
+            r = requests.get(
+                'https://logs.true.nl:443/api/search/universal/relative?query=pa5050&range=10&decorate=true',
+                headers={'accept': 'application/json'}, allow_redirects=True,
+                auth=('yannick.soepnel@true.nl', 'Rome:Fell:0!'))
+            message = r.json()['messages']
+            if (len(message) != 0):
+                for hit in message:
+                    try:
+                        if not hit in duplicate_palo_alto:
+                            verwerking = process_data_palo(hit)
+                            if verwerking != None:
+                                gecombineerd.append(verwerking)
+                                ungraded_events.append(verwerking)
+                        duplicate_palo_alto.append(hit)
+                    except:
+                        pass
+            time.sleep(1)
+    except:
+        pass
 
 def get_logprocessor_data(): ## ophalen logprocessor data
-    while True:
-        r = requests.get(
-            'https://logprocessor.true.nl/abuser/get_security_alerts?timeframe=1'
-        )
-        message = r.json()
+    try:
+        while True:
+            r = requests.get(
+                'https://logprocessor.true.nl/abuser/get_security_alerts?timeframe=1'
+            )
+            message = r.json()
 
-        if (len(message) != 0):
-            for m in message:
-                hit = json.loads(m)
-                try:
-                    if not hit in duplicate_logprocessor:
-                        verwerking = process_data_logprocessor(hit)
-                        if verwerking != None:
-                            gecombineerd.append(verwerking)
-                            ungraded_events.append(verwerking)
-                    duplicate_logprocessor.append(hit)
-                except:
-                    pass
-        time.sleep(1)
+            if (len(message) != 0):
+                for m in message:
+                    hit = json.loads(m)
+                    try:
+                        if not hit in duplicate_logprocessor:
+                            verwerking = process_data_logprocessor(hit)
+                            if verwerking != None:
+                                gecombineerd.append(verwerking)
+                                ungraded_events.append(verwerking)
+                        duplicate_logprocessor.append(hit)
+                    except:
+                        pass
+            time.sleep(1)
+    except:
+        pass
 
 def unieke_data_sorteren(data): ## Deze functie zorgt ervoor dat een hele alert goed geparsed wordt zodat hij weergegeven kan worden in unieke data / Meer informatie knop
     unieke_data_duckhunt = {}
@@ -322,7 +334,7 @@ def rekenwerk():
                     elif(actie.actie_id == 2):
                         if(actie.score1 <= total_score <= actie.score2):
                             host_grade_alert[host_grade_ip] = host_grade[host_grade_ip]
-                            send_alert(alert)
+                            # send_alert(alert)
                             try:
                                 del host_grade_log[host_grade_ip]
                             except:
@@ -330,7 +342,7 @@ def rekenwerk():
                     elif(actie.actie_id == 3):
                         if(actie.score1 <= total_score):
                             host_grade_ban[host_grade_ip] = host_grade[host_grade_ip]
-                            send_abuse_email(alert)
+                            # send_abuse_email(alert)
                             try:
                                 del host_grade_alert[host_grade_ip]
                             except:
@@ -716,15 +728,66 @@ def index():
 
 @app.route('/log', methods=["GET", "POST"])
 def log():
-    return render_template('log.html', host_grade_log=sorted_d_host_grade_log)
+    global tijd1
+    if request.method == "POST":
+        nieuwe_tijd = request.form["tijd"]
+        if (nieuwe_tijd == "15 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
+            print("15 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "30 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=10)
+            print("30 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "1 uur"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=15)
+            return redirect(request.path, code=302)
+    elif request.method == "POST":
+        tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=2)
+        print("else")
+    return render_template('log.html', host_grade_log=sorted_d_host_grade_log, tijd1=tijd1)
 
 @app.route('/meldingen', methods=["GET", "POST"])
 def alert():
-    return render_template('meldingen.html', host_grade_alert=sorted_d_host_grade_alert)
+    global tijd1
+    if request.method == "POST":
+        nieuwe_tijd = request.form["tijd"]
+        if (nieuwe_tijd == "15 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
+            print("15 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "30 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=10)
+            print("30 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "1 uur"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=15)
+            return redirect(request.path, code=302)
+    elif request.method == "POST":
+        tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=2)
+        print("else")
+    return render_template('meldingen.html', host_grade_alert=sorted_d_host_grade_alert, tijd1=tijd1)
 
 @app.route('/ban', methods=["GET", "POST"])
 def ban():
-    return render_template('ban.html', host_grade_ban=sorted_d_host_grade_ban)
+    global tijd1
+    if request.method == "POST":
+        nieuwe_tijd = request.form["tijd"]
+        if (nieuwe_tijd == "15 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
+            print("15 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "30 minuten"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=10)
+            print("30 minuten")
+            return redirect(request.path, code=302)
+        elif (nieuwe_tijd == "1 uur"):
+            tijd1 = datetime.datetime.now() - datetime.timedelta(minutes=15)
+            return redirect(request.path, code=302)
+    elif request.method == "POST":
+        tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=2)
+        print("else")
+    return render_template('ban.html', host_grade_ban=sorted_d_host_grade_ban, tijd1=tijd1)
 
 @app.route('/combined', methods=["GET", "POST"])
 def combined():
