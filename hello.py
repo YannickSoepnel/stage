@@ -34,9 +34,9 @@ db7 = SQLAlchemy(app)
 
 server = smtplib.SMTP('smtp.office365.com', 587)
 server.starttls()
-server.login('yannick.soepnel@true.nl', 'Rome:Fell:0!')
+server.login('', '')
 
-SQLALCHEMY_DATABASE_URI = "mysql+pymysql://sauron:S@ur0n01@localhost/sauron?charset=utf8mb4"
+SQLALCHEMY_DATABASE_URI = "mysql+pymysql://:@localhost/sauron?charset=utf8mb4"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -125,7 +125,7 @@ time_seconden_ophogen = 0
 tijd1 = datetime.datetime.now() - datetime.timedelta(seconds=10)
 
 def get_honeypot_data(): ## ophalen honeypot data
-    es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("honey", "G1efH0neyN0w"), ignore_warnings=True)
+    es = Elasticsearch('https://87.233.6.250:64297/es/', verify_certs=False, http_auth=("", ""), ignore_warnings=True)
     time_last_request = datetime.datetime.utcnow()
     while True:
        tmp = str(time_last_request).split(" ")
@@ -162,7 +162,7 @@ def get_duckhunt_data(): ## ophalen duckhunt data
         r = requests.get(
             'https://webinsight.true.nl:443/api/search/universal/relative?query=trueserver_document_type%3Aduckhunt%5C-modsecurity%20OR%20trueserver_document_type%3Aduckhunt%5C-suricata&range=1&fields=*&decorate=true',
             headers={'accept': 'application/json'}, allow_redirects=True,
-            auth=('admin', '1hil6ep6Y3jI2tfCXIKcKsTlUjnZpTj8'))
+            auth=('', ''))
         message = r.json()['messages']
         if (len(message) != 0):
             for hit in message:
@@ -182,7 +182,7 @@ def get_palo_data(): ## ophalen palo alto data
         r = requests.get(
             'https://logs.true.nl:443/api/search/universal/relative?query=pa5050&range=10&decorate=true',
             headers={'accept': 'application/json'}, allow_redirects=True,
-            auth=('yannick.soepnel@true.nl', 'Rome:Fell:0!'))
+            auth=('', ''))
         message = r.json()['messages']
         if (len(message) != 0):
             for hit in message:
@@ -671,7 +671,7 @@ def send_abuse_email(alert): #Het versturen van abuse emails naar provider
                    'Timestamp: ' + timestamp + '\n'+\
                    '\n \n If you would like to receive more information please contact us at security@true.nl'
             message = 'Subject: {}\n\n{}'.format(subject, text)
-            server.sendmail('yannick.soepnel@true.nl', abuse_mail, message)
+            server.sendmail('', abuse_mail, message)
             print('after sending')
         else:
             pass
@@ -680,7 +680,7 @@ def send_abuse_email(alert): #Het versturen van abuse emails naar provider
 
 def send_alert(alert): #Het versturen van alerts in microsoft teams
     global send_alert_list
-    myTeamsMessage = pymsteams.connectorcard("https://outlook.office.com/webhook/70680fab-f393-4f6e-bf4a-02d5166ad298@fcea803c-cd1f-45a6-8e44-11b1d7165ccc/IncomingWebhook/46e03e0ef6fe4d738d4e9b5c88474eb8/d373d754-fdb2-4e8a-b96a-01806c6e2e2a")
+    myTeamsMessage = pymsteams.connectorcard("https://outlook.office.com/webhook/")
     ip = alert['source_ip']
     if not ip in send_alert_list:
         send_alert_list.append(ip)
